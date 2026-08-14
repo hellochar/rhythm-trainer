@@ -4,7 +4,7 @@ Guidance for working on this repository.
 
 ## What this is
 
-Cowbell Echo is a browser rhythm sight-reading trainer. It generates random notated rhythms, plays them on a synthesized cowbell, and leaves a silent repeat of the same bar for the user to play back, optionally scoring their taps. See README.md for user-facing behavior.
+A browser rhythm sight-reading trainer. It generates random notated rhythms, plays them on a synthesized cowbell, and leaves a silent repeat of the same bar for the user to play back, optionally scoring their taps. See README.md for user-facing behavior.
 
 ## Architecture
 
