@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cowbell Echo — Rhythm Sight-Reading Prototype</title>
+<style>
+  :root{
+    --stage:#131a24;
+    --stage-2:#0d131b;
+    --paper:#f6f0e1;
+    --paper-edge:#e4dbc4;
+    --ink:#26221a;
+    --brass:#d9a441;
+    --teal:#4fb8a8;
+    --good:#3f9d6d;
+    --ok:#d9a441;
+    --bad:#cf5f52;
+    --text:#e8e4da;
+    --text-dim:#9aa3ad;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(1200px 700px at 50% -10%, #1b2531 0%, var(--stage) 45%, var(--stage-2) 100%);
+    color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex;flex-direction:column;align-items:center;
+    padding:20px 14px 40px;
+  }
+  header{width:100%;max-width:900px;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  h1{font-size:clamp(20px,4vw,28px);font-weight:800;letter-spacing:-.02em}
+  h1 .bell{color:var(--brass)}
+  .sub{color:var(--text-dim);font-size:13px}
+
+  .lamp{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.12em;
+    padding:6px 14px;border-radius:999px;border:1px solid #ffffff22;background:#ffffff0a;
+    min-width:150px;justify-content:center;
+  }
+  .lamp .dot{width:9px;height:9px;border-radius:50%;background:var(--text-dim)}
+  .lamp[data-p="count"]  .dot{background:#e8e4da;box-shadow:0 0 8px #e8e4da}
+  .lamp[data-p="listen"] .dot{background:var(--brass);box-shadow:0 0 10px var(--brass)}
+  .lamp[data-p="user"]   .dot{background:var(--teal);box-shadow:0 0 10px var(--teal)}
+  .lamp[data-p="results"] .dot{background:var(--good)}
+  .lamp[data-p="cal"]    .dot{background:#b48ae0;box-shadow:0 0 10px #b48ae0}
+
+  .chart{
+    width:100%;max-width:900px;background:var(--paper);
+    border:1px solid var(--paper-edge);border-radius:10px;
+    box-shadow:0 12px 30px #00000055, inset 0 0 0 1px #ffffff66;
+    padding:18px 10px 8px;position:relative;
+  }
+  .chart svg{display:block;width:100%;height:auto}
+
+  .controls{width:100%;max-width:900px;margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  button{
+    font:inherit;font-weight:700;border:none;border-radius:8px;cursor:pointer;
+    padding:10px 18px;color:#1a1408;background:var(--brass);
+    transition:transform .06s ease, filter .12s ease;
+  }
+  button:hover{filter:brightness(1.08)}
+  button:active{transform:translateY(1px)}
+  button.secondary{background:#ffffff14;color:var(--text);border:1px solid #ffffff2a}
+  button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  .field{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim)}
+  .field select,.field input[type=number]{
+    font:inherit;background:#ffffff10;color:var(--text);
+    border:1px solid #ffffff2a;border-radius:6px;padding:6px 8px;width:auto;
+  }
+  .field input[type=number]{width:74px}
+  .field input[type=checkbox]{accent-color:var(--teal);width:16px;height:16px}
+
+  .pad{
+    width:100%;max-width:900px;margin-top:14px;
+    border:2px dashed #ffffff2c;border-radius:12px;
+    padding:26px 16px;text-align:center;cursor:pointer;user-select:none;
+    font-weight:700;letter-spacing:.04em;color:var(--text-dim);
+    transition:background .08s ease,border-color .08s ease,color .08s ease;
+  }
+  .pad.hot{border-color:var(--teal);color:var(--teal);background:#4fb8a814}
+  .pad.hit{background:#4fb8a833}
+
+  .panel{width:100%;max-width:900px;margin-top:14px;background:#ffffff08;border:1px solid #ffffff1c;border-radius:10px;padding:12px 14px;font-size:14px}
+  .panel summary{cursor:pointer;font-weight:700;color:var(--text)}
+  .panel .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+  .status{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--text-dim)}
+  #result{min-height:22px;margin-top:12px;font-size:14px}
+  #result b{color:var(--text)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text-dim)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Cowbell <span class="bell">Echo</span></h1>
+    <div class="sub">It plays a notated rhythm on cowbell, then the same bar comes around again for you to play it back — in your head, on a practice pad, or with tap scoring turned on. New rhythms keep coming until you stop.</div>
+  </div>
+  <div class="lamp" id="lamp" data-p="ready"><span class="dot"></span><span id="lampText">READY</span></div>
+</header>
+
+<div class="chart"><div id="score"></div></div>
+
+<div class="controls">
+  <button id="startBtn">Start ▶</button>
+  <button id="replayBtn" class="secondary">Replay once ▶</button>
+  <button id="stopBtn" class="secondary">Stop</button>
+  <label class="field">Tempo <input type="number" id="tempo" min="40" max="200" step="5" value="90"> bpm</label>
+  <label class="field">Length
+    <select id="measures"><option value="1">1 measure</option><option value="2">2 measures</option></select>
+  </label>
+  <label class="field">Difficulty
+    <select id="difficulty">
+      <option value="basic">Basic</option>
+      <option value="standard" selected>Standard</option>
+      <option value="spicy">Spicy (16ths)</option>
+      <option value="triplets">Triplets</option>
+      <option value="crazy">Crazy (5s and 7s)</option>
+    </select>
+  </label>
+  <label class="field"><input type="checkbox" id="continuous" checked> continuous</label>
+  <label class="field"><input type="checkbox" id="echoSound"> cowbell on my pass</label>
+  <label class="field"><input type="checkbox" id="metOnUser"> click on my pass</label>
+  <label class="field"><input type="checkbox" id="scoring"> score my taps</label>
+  <label class="field"><input type="checkbox" id="tapSound" checked> sound on my taps</label>
+</div>
+
+<div class="pad" id="pad">TAP HERE — or press SPACE</div>
+<div id="result"></div>
+<div class="legend" id="legend">
+  <span><i style="background:var(--good)"></i>within 40 ms</span>
+  <span><i style="background:var(--ok)"></i>within 90 ms</span>
+  <span><i style="background:var(--bad)"></i>beyond that</span>
+  <span><i style="background:none;border:2px solid var(--bad);width:8px;height:8px"></i>missed note</span>
+  <span style="color:var(--bad)">✕ extra tap</span>
+</div>
+
+<details class="panel" id="calPanel">
+  <summary>Input delay calibration</summary>
+  <div class="row">
+    <label class="field">Offset <input type="number" id="offset" step="1" value="0"> ms</label>
+    <button id="calBtn" class="secondary">Run tap test</button>
+    <span class="status" id="calStatus">Tap along with the steady clicks. The measured average delay of your taps becomes the offset, and it is subtracted from your taps when scoring. You can also type a value by hand. Negative values mean you tend to tap early.</span>
+  </div>
+</details>
+
+<script>
+"use strict";
+/* ---------- rhythm cell library ---------- */
+const CELLS = {
+  basic: [
+    {w:5, beats:1, ev:[{d:1,g:'q'}]},
+    {w:4, beats:1, beam:true, ev:[{d:.5,g:'e'},{d:.5,g:'e'}]},
+    {w:2, beats:1, ev:[{d:1,g:'qr',rest:true}]},
+  ],
+  standard: [
+    {w:3, beats:1, ev:[{d:.5,g:'er',rest:true},{d:.5,g:'e',flag:true}]},
+    {w:2, beats:2, ev:[{d:2,g:'h'}]},
+    {w:3, beats:2, ev:[{d:1.5,g:'dq'},{d:.5,g:'e',flag:true}]},
+  ],
+  spicy: [
+    {w:3, beats:1, beam:true, ev:[{d:.25,g:'s'},{d:.25,g:'s'},{d:.25,g:'s'},{d:.25,g:'s'}]},
+    {w:3, beats:1, beam:true, ev:[{d:.5,g:'e'},{d:.25,g:'s'},{d:.25,g:'s'}]},
+    {w:3, beats:1, beam:true, ev:[{d:.25,g:'s'},{d:.25,g:'s'},{d:.5,g:'e'}]},
+  ],
+  triplets: [
+    {w:3, beats:1, beam:true, tn:3, ev:[{d:1/3,g:'e'},{d:1/3,g:'e'},{d:1/3,g:'e'}]},
+    {w:1.5, beats:1, beam:true, tn:3, ev:[
+      {d:1/6,g:'s',bs:0},{d:1/6,g:'s',bs:0},{d:1/6,g:'s',bs:0},
+      {d:1/6,g:'s',bs:1},{d:1/6,g:'s',bs:1},{d:1/6,g:'s',bs:1}]},
+    {w:2, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'q'},{d:2/3,g:'q'}]},
+  ],
+  crazy: [
+    {w:2, beats:1, beam:true, tn:5, ev:[{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'}]},
+    {w:2, beats:2, beam:true, tn:5, ev:[{d:.4,g:'e'},{d:.4,g:'e'},{d:.4,g:'e'},{d:.4,g:'e'},{d:.4,g:'e'}]},
+    {w:2, beats:2, beam:true, tn:7, ev:[{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'}]},
+  ]
+};
+function pool(diff){
+  let p=CELLS.basic;
+  if(diff==='basic') return p;
+  p=p.concat(CELLS.standard); if(diff==='standard') return p;
+  p=p.concat(CELLS.spicy); if(diff==='spicy') return p;
+  p=p.concat(CELLS.triplets); if(diff==='triplets') return p;
+  return p.concat(CELLS.crazy);
+}
+function pickWeighted(list){
+  let total=list.reduce((s,c)=>s+c.w,0), r=Math.random()*total;
+  for(const c of list){ r-=c.w; if(r<=0) return c; }
+  return list[list.length-1];
+}
+function genMeasure(diff){
+  for(let attempt=0; attempt<30; attempt++){
+    const placed=[]; let pos=0;
+    while(pos<4){
+      const cands = pool(diff).filter(c => c.beats<=(4-pos) && (c.beats===1 || pos%2===0));
+      const c = pickWeighted(cands);
+      placed.push({cell:c, start:pos});
+      pos += c.beats;
+    }
+    const onsets = placed.flatMap(p=>p.cell.ev).filter(e=>!e.rest).length;
+    if(onsets>=2) return placed;
+  }
+  return [{cell:CELLS.basic[0],start:0},{cell:CELLS.basic[0],start:1},{cell:CELLS.basic[0],start:2},{cell:CELLS.basic[0],start:3}];
+}
+function genRhythm(measures, diff){
+  const ms=[]; for(let i=0;i<measures;i++) ms.push(genMeasure(diff));
+  const events=[];
+  ms.forEach((m,mi)=>m.forEach(p=>{
+    let t=mi*4+p.start;
+    const grouped = p.cell.beam || p.cell.bracket;
+    p.cell.ev.forEach(e=>{
+      events.push({t, d:e.d, g:e.g, rest:!!e.rest, flag:!!e.flag,
+                   tn:p.cell.tn||0, bracket:!!p.cell.bracket,
+                   beamId:(grouped ? mi+'-'+p.start+'-'+(e.bs||0) : null)});
+      t+=e.d;
+    });
+  }));
+  return {measures, events, onsets:events.filter(e=>!e.rest).map(e=>e.t)};
+}
+
+/* ---------- notation rendering (SVG) ---------- */
+const MW=350, PADL=20, Y=76;
+function xOf(beat){ const mi=Math.floor(beat/4), f=(beat-mi*4)/4;
+  return PADL + mi*MW + 16 + f*(MW-44); }
+function renderRhythm(r){
+  const W = PADL*2 + r.measures*MW, H=134;
+  let s='';
+  s+=`<line x1="${PADL}" y1="${Y}" x2="${W-PADL}" y2="${Y}" stroke="var(--ink)" stroke-width="1.4"/>`;
+  for(let mi=0;mi<=r.measures;mi++){
+    const bx=PADL+mi*MW;
+    s+=`<line x1="${bx}" y1="${Y-30}" x2="${bx}" y2="${Y+12}" stroke="var(--ink)" stroke-width="${mi===r.measures?3:1.6}"/>`;
+    if(mi===r.measures) s+=`<line x1="${bx-5}" y1="${Y-30}" x2="${bx-5}" y2="${Y+12}" stroke="var(--ink)" stroke-width="1.4"/>`;
+  }
+  for(let b=0;b<r.measures*4;b++){
+    s+=`<text x="${xOf(b)}" y="${Y+34}" font-size="11" fill="#00000045" text-anchor="middle" font-family="ui-monospace,monospace">${b%4+1}</text>`;
+  }
+  // beam / bracket groups
+  const groups={};
+  r.events.forEach(e=>{ if(e.beamId && !e.rest){ (groups[e.beamId]=groups[e.beamId]||[]).push(e); }});
+  const beamY=Y-44;
+  for(const id in groups){
+    const g=groups[id]; if(g.length<2) continue;
+    const x1=xOf(g[0].t)+6.2, x2=xOf(g[g.length-1].t)+6.2;
+    const midX=(x1+x2)/2;
+    if(g[0].bracket){
+      // tuplet bracket over unbeamed quarters
+      const by=Y-50;
+      s+=`<path d="M ${x1-8} ${by+6} L ${x1-8} ${by} L ${midX-8} ${by}" fill="none" stroke="var(--ink)" stroke-width="1.6"/>`;
+      s+=`<path d="M ${midX+8} ${by} L ${x2+8} ${by} L ${x2+8} ${by+6}" fill="none" stroke="var(--ink)" stroke-width="1.6"/>`;
+      s+=`<text x="${midX}" y="${by+4}" font-size="13" font-style="italic" font-weight="bold" fill="var(--ink)" text-anchor="middle">${g[0].tn}</text>`;
+      continue;
+    }
+    // primary beam
+    s+=`<rect x="${x1}" y="${beamY}" width="${x2-x1}" height="4.4" fill="var(--ink)"/>`;
+    // secondary (16th) beams
+    for(let i=0;i<g.length-1;i++){
+      const a=g[i], b=g[i+1], ax=xOf(a.t)+6.2, bx2=xOf(b.t)+6.2;
+      if(a.g==='s'&&b.g==='s') s+=`<rect x="${ax}" y="${beamY+7.5}" width="${bx2-ax}" height="3.4" fill="var(--ink)"/>`;
+      else if(b.g==='s') s+=`<rect x="${bx2-10}" y="${beamY+7.5}" width="10" height="3.4" fill="var(--ink)"/>`;
+      else if(a.g==='s' && (i===0 || g[i-1].g!=='s')) s+=`<rect x="${ax-10}" y="${beamY+7.5}" width="10" height="3.4" fill="var(--ink)"/>`;
+    }
+    // tuplet number above beam
+    if(g[0].tn){
+      s+=`<text x="${midX}" y="${beamY-5}" font-size="13" font-style="italic" font-weight="bold" fill="var(--ink)" text-anchor="middle">${g[0].tn}</text>`;
+    }
+  }
+  // events
+  r.events.forEach(e=>{
+    const x=xOf(e.t);
+    if(e.rest){
+      if(e.g==='qr'){
+        s+=`<path d="M ${x-3} ${Y-25} L ${x+4} ${Y-16} L ${x-2} ${Y-9} L ${x+5} ${Y-1} C ${x-2} ${Y-5} ${x-5} ${Y+1} ${x+1} ${Y+6}" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linejoin="round"/>`;
+      } else {
+        s+=`<circle cx="${x-2}" cy="${Y-15}" r="3" fill="var(--ink)"/>`+
+           `<path d="M ${x-2} ${Y-13} Q ${x+4} ${Y-13} ${x+5} ${Y-17} L ${x-1} ${Y+3}" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
+      }
+      return;
+    }
+    const open = e.g==='h';
+    s+=`<ellipse cx="${x}" cy="${Y}" rx="7" ry="5.2" transform="rotate(-18 ${x} ${Y})" `+
+       (open?`fill="var(--paper)" stroke="var(--ink)" stroke-width="2.2"`:`fill="var(--ink)"`)+`/>`;
+    const grp = e.beamId ? (groups[e.beamId]||[]) : [];
+    const inBeam = grp.length>1 && !e.bracket;
+    const stemTop = inBeam ? Y-44 : Y-38;
+    s+=`<line x1="${x+6.2}" y1="${Y-1.5}" x2="${x+6.2}" y2="${stemTop}" stroke="var(--ink)" stroke-width="2"/>`;
+    if(e.g==='dq') s+=`<circle cx="${x+13}" cy="${Y-3}" r="2.4" fill="var(--ink)"/>`;
+    if(e.flag){
+      s+=`<path d="M ${x+6.2} ${Y-38} C ${x+15} ${Y-33} ${x+16} ${Y-27} ${x+10} ${Y-19}" fill="none" stroke="var(--ink)" stroke-width="2.6"/>`;
+    }
+  });
+  s+=`<line id="playhead" x1="-10" y1="${Y-56}" x2="-10" y2="${Y+22}" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
+  s+=`<g id="markers"></g>`;
+  document.getElementById('score').innerHTML =
+    `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+function addMark(html){
+  const m=document.getElementById('score').querySelector('#markers');
+  if(m) m.insertAdjacentHTML('beforeend', html);
+}
+
+/* ---------- audio ---------- */
+let ctx=null, master=null;
+function audio(){
+  if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); }
+  if(!master){ master=ctx.createGain(); master.connect(ctx.destination); }
+  return ctx;
+}
+function cowbell(at, vol=0.7){
+  const c=audio(), g=c.createGain(), bp=c.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value=820; bp.Q.value=1.1;
+  g.gain.setValueAtTime(vol, at);
+  g.gain.exponentialRampToValueAtTime(0.001, at+0.32);
+  [562,845].forEach(f=>{
+    const o=c.createOscillator(); o.type='square'; o.frequency.value=f;
+    o.connect(bp); o.start(at); o.stop(at+0.35);
+  });
+  bp.connect(g); g.connect(master);
+}
+function click(at, hi=false, vol=0.5){
+  const c=audio(), o=c.createOscillator(), g=c.createGain();
+  o.type='sine'; o.frequency.value=hi?1350:900;
+  g.gain.setValueAtTime(vol, at);
+  g.gain.exponentialRampToValueAtTime(0.001, at+0.07);
+  o.connect(g); g.connect(master); o.start(at); o.stop(at+0.09);
+}
+function killAudio(){
+  if(master){ try{master.disconnect();}catch(e){} master=null; }
+}
+
+/* ---------- state / flow ---------- */
+const $=id=>document.getElementById(id);
+const state={phase:'ready', rhythm:null, cycle:null, pending:null, single:false,
+             beat:0.6, expected:[], win:0.12, extras:0, cal:null, raf:0};
+const PHASE_TEXT={ready:'READY',count:'COUNT-IN',listen:'LISTEN',user:'YOUR TURN',results:'RESULTS',cal:'CALIBRATING'};
+function setPhase(p){
+  state.phase=p;
+  $('lamp').dataset.p=p; $('lampText').textContent=PHASE_TEXT[p];
+  $('pad').classList.toggle('hot', p==='user' && $('scoring').checked);
+}
+function makeRhythm(){ return genRhythm(+$('measures').value, $('difficulty').value); }
+
+function scheduleCycle(r, start, beat){
+  const total=r.measures*4;
+  r.onsets.forEach(b=>cowbell(start+b*beat));
+  const user=start+total*beat, end=user+total*beat;
+  if($('echoSound').checked) r.onsets.forEach(b=>cowbell(user+b*beat, 0.45));
+  if($('metOnUser').checked) for(let i=0;i<total;i++) click(user+i*beat, i%4===0, 0.16);
+  return {rhythm:r, listen:start, user, end};
+}
+function prepareExpected(){
+  const cy=state.cycle, beat=state.beat;
+  const ex=cy.rhythm.onsets.map(b=>({beat:b, t:cy.user+b*beat, hit:false, missMarked:false, delta:0}));
+  let mg=beat;
+  for(let i=1;i<ex.length;i++) mg=Math.min(mg, ex[i].t-ex[i-1].t);
+  state.expected=ex;
+  state.win=Math.max(0.08, Math.min(0.17, mg*0.45));
+  state.extras=0;
+}
+function startRun(fresh, single){
+  stopAll(false);
+  if(fresh || !state.rhythm) state.rhythm=makeRhythm();
+  renderRhythm(state.rhythm);
+  const c=audio(); c.resume();
+  const bpm=+$('tempo').value||90;
+  state.beat=60/bpm;
+  state.single=single;
+  const t0=c.currentTime+0.18;
+  for(let i=0;i<4;i++) click(t0+i*state.beat, i===0, 0.5);
+  state.cycle=scheduleCycle(state.rhythm, t0+4*state.beat, state.beat);
+  state.pending=null;
+  prepareExpected();
+  setPhase('count');
+  cancelAnimationFrame(state.raf);
+  loop();
+}
+function loop(){
+  const c=ctx, cy=state.cycle; if(!c||!cy) return;
+  const now=c.currentTime;
+  const ph=$('score').querySelector('#playhead');
+  if(now<cy.listen){
+    setIf('count'); if(ph) ph.setAttribute('opacity','0');
+  } else if(now<cy.user){
+    setIf('listen');
+    movePlayhead(ph,(now-cy.listen)/state.beat,'var(--brass)');
+  } else if(now<cy.end){
+    setIf('user');
+    movePlayhead(ph,(now-cy.user)/state.beat,'var(--teal)');
+    if(scoringOn()) markMisses(now);
+    if(!state.single && !state.pending){
+      const nr=makeRhythm();
+      state.pending={rhythm:nr, cycle:scheduleCycle(nr, cy.end, state.beat)};
+    }
+  } else {
+    if(scoringOn()){ markMisses(Infinity); summarize(); }
+    if(state.pending){
+      state.rhythm=state.pending.rhythm;
+      state.cycle=state.pending.cycle;
+      state.pending=null;
+      renderRhythm(state.rhythm);
+      prepareExpected();
+      setPhase('listen');
+    } else {
+      if(ph) ph.setAttribute('opacity','0');
+      setPhase('results');
+      return;
+    }
+  }
+  state.raf=requestAnimationFrame(loop);
+}
+function setIf(p){ if(state.phase!==p) setPhase(p); }
+function movePlayhead(ph, beatPos, color){
+  if(!ph) return;
+  const x=xOf(Math.min(Math.max(beatPos,0), state.rhythm.measures*4-0.001));
+  ph.setAttribute('x1',x); ph.setAttribute('x2',x);
+  ph.setAttribute('stroke',color); ph.setAttribute('opacity','0.85');
+}
+function stopAll(reset=true){
+  cancelAnimationFrame(state.raf);
+  killAudio(); state.cycle=null; state.pending=null;
+  if(reset){
+    setPhase('ready');
+    const ph=$('score').querySelector('#playhead'); if(ph) ph.setAttribute('opacity','0');
+  }
+}
+
+/* ---------- realtime marking & scoring ---------- */
+function markMisses(now){
+  state.expected.forEach(e=>{
+    if(!e.hit && !e.missMarked && now > e.t + state.win){
+      e.missMarked=true;
+      addMark(`<circle cx="${xOf(e.beat)}" cy="${Y+18}" r="5" fill="none" stroke="var(--bad)" stroke-width="2.4"/>`);
+    }
+  });
+}
+function handleScoredTap(now){
+  const off=(+$('offset').value||0)/1000;
+  const adj=now-off, cy=state.cycle;
+  let best=null, bd=Infinity;
+  state.expected.forEach(e=>{
+    if(!e.hit){ const d=Math.abs(adj-e.t); if(d<bd){bd=d;best=e;} }
+  });
+  if(best && bd<=state.win){
+    best.hit=true; best.delta=(adj-best.t)*1000;
+    const a=Math.abs(best.delta);
+    const col = a<=40?'var(--good)': a<=90?'var(--ok)':'var(--bad)';
+    const cx=xOf(best.beat);
+    addMark(`<circle cx="${cx}" cy="${Y+18}" r="5" fill="${col}"/>`+
+      `<text x="${cx}" y="${Y+34+14}" font-size="10" fill="#00000070" text-anchor="middle" font-family="ui-monospace,monospace">${best.delta>0?'+':''}${Math.round(best.delta)}</text>`);
+  } else {
+    state.extras++;
+    const b=Math.max(0,Math.min((adj-cy.user)/state.beat, state.rhythm.measures*4-0.01));
+    addMark(`<text x="${xOf(b)}" y="${Y+22}" font-size="13" fill="var(--bad)" text-anchor="middle" font-weight="bold">✕</text>`);
+  }
+}
+function summarize(){
+  const hits=state.expected.filter(e=>e.hit);
+  const n=state.expected.length;
+  const avg=hits.length? Math.round(hits.reduce((s,e)=>s+Math.abs(e.delta),0)/hits.length):0;
+  let msg=`Last rhythm: you hit <b>${hits.length} of ${n}</b> notes.`;
+  if(hits.length) msg+=` Average timing error was <b>${avg} ms</b>.`;
+  if(state.extras) msg+=` You added <b>${state.extras}</b> extra tap${state.extras>1?'s':''}.`;
+  $('result').innerHTML=msg;
+}
+
+/* ---------- tapping ---------- */
+function scoringOn(){ return $('scoring').checked; }
+function updateScoringUI(){
+  const on=scoringOn();
+  $('pad').style.display=on?'':'none';
+  $('legend').style.display=on?'flex':'none';
+  $('result').style.display=on?'':'none';
+  $('pad').classList.toggle('hot', on && state.phase==='user');
+}
+$('scoring').addEventListener('change',updateScoringUI);
+function registerTap(){
+  if(!ctx) return;
+  const now=ctx.currentTime;
+  if(state.phase==='cal' && state.cal){ state.cal.taps.push(now); flashPad(); return; }
+  if(!scoringOn()) return;
+  const cy=state.cycle; if(!cy) return;
+  if(now>cy.user-0.3 && now<cy.end+0.25){
+    if($('tapSound').checked) click(now,false,0.22);
+    handleScoredTap(now);
+    flashPad();
+  }
+}
+function flashPad(){
+  const p=$('pad'); p.classList.add('hit');
+  setTimeout(()=>p.classList.remove('hit'),90);
+}
+$('pad').addEventListener('pointerdown',e=>{e.preventDefault();registerTap();});
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.code==='Enter'){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON') return;
+    e.preventDefault(); registerTap();
+  }
+});
+
+/* ---------- calibration ---------- */
+$('calBtn').addEventListener('click',()=>{
+  stopAll();
+  const c=audio(); c.resume();
+  const cb=60/100, n=10, start=c.currentTime+0.25;
+  for(let i=0;i<n;i++) click(start+i*cb, i===0, 0.5);
+  state.cal={start, beat:cb, n, taps:[]};
+  setPhase('cal');
+  $('calStatus').textContent='Tap along with every click…';
+  setTimeout(finishCal, ((start-c.currentTime)+n*cb+0.5)*1000);
+});
+function finishCal(){
+  const cal=state.cal; state.cal=null; setPhase('ready');
+  if(!cal) return;
+  const deltas=[];
+  cal.taps.forEach(t=>{
+    const k=Math.round((t-cal.start)/cal.beat);
+    if(k>=1 && k<cal.n){
+      const d=t-(cal.start+k*cal.beat);
+      if(Math.abs(d)<0.25) deltas.push(d*1000);
+    }
+  });
+  if(deltas.length>=4){
+    deltas.sort((a,b)=>a-b);
+    const med=Math.round(deltas[Math.floor(deltas.length/2)]);
+    $('offset').value=med;
+    $('calStatus').textContent=`Measured ${med} ms from ${deltas.length} taps. The offset field is now set to that value.`;
+  } else {
+    $('calStatus').textContent='Not enough taps were registered. Run the test again and tap along with each click.';
+  }
+}
+
+/* ---------- buttons ---------- */
+$('startBtn').addEventListener('click',()=>startRun(true, !$('continuous').checked));
+$('replayBtn').addEventListener('click',()=>startRun(false, true));
+$('stopBtn').addEventListener('click',()=>stopAll());
+
+state.rhythm=makeRhythm();
+renderRhythm(state.rhythm);
+updateScoringUI();
+</script>
+</body>
+</html>
