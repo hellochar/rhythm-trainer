@@ -1,6 +1,6 @@
-# Cowbell Echo
+# Rhythm Trainer
 
-Cowbell Echo is a rhythm sight-reading trainer that runs in the browser. It shows a randomly generated one or two measure rhythm in music notation, plays it once on a synthesized cowbell, and then the same bar comes around again for you to play it back. You can play it back in your head, on a drum practice pad, or by tapping into the app with scoring turned on. In continuous mode, a new rhythm follows on the very next beat and the pulse never stops.
+Rhythm sight-reading trainer that runs in the browser. It shows a randomly generated one or two measure rhythm in music notation, plays it once on a synthesized cowbell, and then the same bar comes around again for you to play it back. You can play it back in your head, on a drum practice pad, or by tapping into the app with scoring turned on. In continuous mode, a new rhythm follows on the very next beat and the pulse never stops.
 
 The whole app is one file, `index.html`, with no dependencies and no build step.
 
