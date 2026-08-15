@@ -6,24 +6,24 @@
 <title>Rhythm Trainer — Sight-Reading Prototype</title>
 <style>
   :root{
-    --stage:#131a24;
-    --stage-2:#0d131b;
-    --paper:#f6f0e1;
-    --paper-edge:#e4dbc4;
-    --paper-dim:#cfc8b6;
-    --ink:#26221a;
+    --stage:#ece5d5;
+    --stage-2:#e0d8c4;
+    --paper:#fbf7ee;
+    --paper-edge:#d9d0b9;
+    --ink:#241f17;
     --brass:#d9a441;
-    --teal:#4fb8a8;
-    --good:#3f9d6d;
-    --ok:#d9a441;
-    --bad:#cf5f52;
-    --text:#e8e4da;
-    --text-dim:#9aa3ad;
+    --brass-deep:#8f6512;
+    --teal:#2d8b7a;
+    --good:#2e7d54;
+    --ok:#a97a16;
+    --bad:#bf4a3c;
+    --text:#241f17;
+    --text-dim:#6d6555;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:radial-gradient(1200px 700px at 50% -10%, #1b2531 0%, var(--stage) 45%, var(--stage-2) 100%);
+    background:radial-gradient(1200px 700px at 50% -10%, #fdfbf4 0%, var(--stage) 45%, var(--stage-2) 100%);
     color:var(--text);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     display:flex;flex-direction:column;align-items:center;
@@ -31,26 +31,26 @@
   }
   header{width:100%;max-width:900px;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
   h1{font-size:clamp(20px,4vw,28px);font-weight:800;letter-spacing:-.02em}
-  h1 .accent{color:var(--brass)}
+  h1 .accent{color:var(--brass-deep)}
   .sub{color:var(--text-dim);font-size:13px}
 
   .lamp{
     display:inline-flex;align-items:center;gap:8px;
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.12em;
-    padding:6px 14px;border-radius:999px;border:1px solid #ffffff22;background:#ffffff0a;
+    padding:6px 14px;border-radius:999px;border:1px solid #00000022;background:#00000008;
     min-width:150px;justify-content:center;
   }
   .lamp .dot{width:9px;height:9px;border-radius:50%;background:var(--text-dim)}
-  .lamp[data-p="count"]  .dot{background:#e8e4da;box-shadow:0 0 8px #e8e4da}
+  .lamp[data-p="count"]  .dot{background:var(--ink)}
   .lamp[data-p="listen"] .dot{background:var(--brass);box-shadow:0 0 10px var(--brass)}
   .lamp[data-p="user"]   .dot{background:var(--teal);box-shadow:0 0 10px var(--teal)}
   .lamp[data-p="results"] .dot{background:var(--good)}
-  .lamp[data-p="cal"]    .dot{background:#b48ae0;box-shadow:0 0 10px #b48ae0}
+  .lamp[data-p="cal"]    .dot{background:#7d54c0}
 
   .chart{
     width:100%;max-width:900px;background:var(--paper);
     border:1px solid var(--paper-edge);border-radius:10px;
-    box-shadow:0 12px 30px #00000055, inset 0 0 0 1px #ffffff66;
+    box-shadow:0 6px 18px #00000014, inset 0 0 0 1px #ffffffcc;
     padding:18px 10px 8px;position:relative;
   }
   .chart svg{display:block;width:100%;height:auto}
@@ -63,50 +63,52 @@
   }
   button:hover{filter:brightness(1.08)}
   button:active{transform:translateY(1px)}
-  button.secondary{background:#ffffff14;color:var(--text);border:1px solid #ffffff2a}
+  button.secondary{background:#00000010;color:var(--text);border:1px solid #00000030}
   button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
   .field{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-dim)}
   .field select,.field input[type=number]{
-    font:inherit;background:#ffffff10;color:var(--text);
-    border:1px solid #ffffff2a;border-radius:6px;padding:6px 8px;width:auto;
+    font:inherit;background:#ffffffb3;color:var(--text);
+    border:1px solid #00000033;border-radius:6px;padding:6px 8px;width:auto;
   }
   .field input[type=number]{width:74px}
   .field input[type=checkbox]{accent-color:var(--teal);width:16px;height:16px}
   .field input[type=range]{accent-color:var(--teal);width:120px}
   .field .vol{font-family:ui-monospace,Menlo,monospace;min-width:30px;text-align:right}
 
-  .figs{display:flex;flex-direction:column;gap:12px;margin-top:12px}
-  .figgroup{border:1px solid #ffffff22;border-radius:10px;padding:4px 12px 12px}
+  .figs{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:12px;margin-top:12px;
+  }
+  .figgroup{border:1px solid #00000026;border-radius:10px;padding:4px 12px 12px}
   .figgroup legend{
     display:flex;align-items:center;gap:8px;
-    padding:0 6px;font-size:13px;font-weight:700;color:var(--text);
+    padding:0 6px;font-size:13px;font-weight:700;color:var(--ink);
   }
   .figclear{
     padding:1px 8px;font-size:13px;line-height:1.4;font-weight:400;
-    background:#ffffff14;color:var(--text-dim);border:1px solid #ffffff2a;border-radius:6px;
+    background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:6px;
   }
   .figrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
   .figopt{
     display:flex;align-items:center;gap:7px;cursor:pointer;
-    background:#ffffff08;border:1px solid #ffffff1a;border-radius:9px;padding:5px 9px 5px 7px;
+    background:#00000014;border:1px solid #00000033;border-radius:9px;padding:5px 9px 5px 7px;
     transition:opacity .1s ease,border-color .1s ease;
   }
   .figopt input{accent-color:var(--teal);width:16px;height:16px;flex:none}
-  .figopt svg{display:block;height:40px;width:auto;background:var(--paper);border-radius:5px;padding:1px 3px}
-  .figopt.off{opacity:.42}
-  .figopt.off svg{background:var(--paper-dim)}
+  .figopt svg{display:block;height:40px;width:auto}
+  .figopt.off{opacity:.45;background:none;border-color:#0000001a}
 
   .pad{
     width:100%;max-width:900px;margin-top:14px;
-    border:2px dashed #ffffff2c;border-radius:12px;
+    border:2px dashed #00000033;border-radius:12px;
     padding:26px 16px;text-align:center;cursor:pointer;user-select:none;
     font-weight:700;letter-spacing:.04em;color:var(--text-dim);
     transition:background .08s ease,border-color .08s ease,color .08s ease;
   }
-  .pad.hot{border-color:var(--teal);color:var(--teal);background:#4fb8a814}
-  .pad.hit{background:#4fb8a833}
+  .pad.hot{border-color:var(--teal);color:var(--teal);background:#2d8b7a14}
+  .pad.hit{background:#2d8b7a33}
 
-  .panel{width:100%;max-width:900px;margin-top:14px;background:#ffffff08;border:1px solid #ffffff1c;border-radius:10px;padding:12px 14px;font-size:14px}
+  .panel{width:100%;max-width:900px;margin-top:14px;background:var(--paper);border:1px solid var(--paper-edge);border-radius:10px;padding:12px 14px;font-size:14px}
   .panel summary{cursor:pointer;font-weight:700;color:var(--text)}
   .panel .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
   .status{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--text-dim)}
@@ -148,15 +150,18 @@
   </label>
   <label class="field"><input type="checkbox" id="continuous" checked> continuous</label>
   <label class="field"><input type="checkbox" id="replay"> replay the same bar</label>
+  <label class="field"><input type="checkbox" id="showLine"> moving line</label>
   <label class="field"><input type="checkbox" id="echoSound"> cowbell on my pass</label>
   <label class="field"><input type="checkbox" id="metronome"> metronome</label>
-  <label class="field"><input type="checkbox" id="scoring"> score my taps</label>
+  <!-- experimenting without tap scoring: uncommenting this brings back the tap
+       pad, the legend, the results line and the calibration panel -->
+  <!-- <label class="field"><input type="checkbox" id="scoring"> score my taps</label> -->
   <label class="field"><input type="checkbox" id="tapSound" checked> sound on my taps</label>
 </div>
 
 <div class="controls">
   <label class="field">Cowbell volume <input type="range" id="bellVol" min="0" max="100" step="5" value="100"><span class="vol" id="bellVolText">100</span></label>
-  <label class="field">Metronome volume <input type="range" id="metVol" min="0" max="100" step="5" value="100"><span class="vol" id="metVolText">100</span></label>
+  <label class="field">Metronome volume <input type="range" id="metVol" min="0" max="100" step="5" value="30"><span class="vol" id="metVolText">30</span></label>
 </div>
 
 <details class="panel" id="figPanel">
@@ -429,16 +434,19 @@ function syncFigs(){
 
 /* ---------- audio ---------- */
 let ctx=null, master=null, metBus=null, bellBus=null;
+/* Output headroom. Sounds are written at full scale so that equal slider
+   positions mean equal loudness; this is the one place level is scaled. */
+const HEADROOM=0.7;
 function audio(){
   if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); }
-  if(!master){ master=ctx.createGain(); master.connect(ctx.destination); }
+  if(!master){ master=ctx.createGain(); master.gain.value=HEADROOM; master.connect(ctx.destination); }
   let made=false;
   if(!bellBus){ bellBus=ctx.createGain(); bellBus.connect(master); made=true; }
   if(!metBus){ metBus=ctx.createGain(); metBus.connect(master); made=true; }
   if(made) syncVol();
   return ctx;
 }
-function cowbell(at, vol=0.7){
+function cowbell(at, vol=1){
   const c=audio(), g=c.createGain(), bp=c.createBiquadFilter();
   bp.type='bandpass'; bp.frequency.value=820; bp.Q.value=1.1;
   g.gain.setValueAtTime(vol, at);
@@ -458,7 +466,7 @@ function click(at, hi=false, vol=0.5, dest=null){
 }
 /* The cowbell and the metronome each ride their own bus, so the checkbox and
    the volume sliders reach sounds that were scheduled a bar ago. */
-function met(at, hi){ audio(); click(at, hi, hi?0.34:0.22, metBus); }
+function met(at, hi){ audio(); click(at, hi, 1, metBus); }
 function syncVol(){
   $('bellVolText').textContent=$('bellVol').value;
   $('metVolText').textContent=$('metVol').value;
@@ -478,7 +486,7 @@ const PHASE_TEXT={ready:'READY',count:'COUNT-IN',listen:'LISTEN',user:'YOUR TURN
 function setPhase(p){
   state.phase=p;
   $('lamp').dataset.p=p; $('lampText').textContent=PHASE_TEXT[p];
-  $('pad').classList.toggle('hot', p==='user' && $('scoring').checked);
+  $('pad').classList.toggle('hot', p==='user' && scoringOn());
 }
 function makeRhythm(){ return genRhythm(+$('measures').value, +$('timesig').value, selectedCells()); }
 /* what the next cycle plays: the same bar again while replay is on */
@@ -510,7 +518,7 @@ function startRun(fresh, single){
   state.beat=60/bpm;
   state.single=single;
   const t0=c.currentTime+0.18, bpb=state.rhythm.bpb;
-  for(let i=0;i<bpb;i++) click(t0+i*state.beat, i===0, 0.5);
+  for(let i=0;i<bpb;i++) click(t0+i*state.beat, i===0, 0.7);
   state.cycle=scheduleCycle(state.rhythm, t0+bpb*state.beat, state.beat);
   state.pending=null;
   prepareExpected();
@@ -556,6 +564,7 @@ function loop(){
 function setIf(p){ if(state.phase!==p) setPhase(p); }
 function movePlayhead(ph, beatPos, color){
   if(!ph) return;
+  if(!$('showLine').checked){ ph.setAttribute('opacity','0'); return; }
   const x=xOf(Math.min(Math.max(beatPos,0), state.rhythm.measures*state.rhythm.bpb-0.001));
   ph.setAttribute('x1',x); ph.setAttribute('x2',x);
   ph.setAttribute('stroke',color); ph.setAttribute('opacity','0.85');
@@ -609,15 +618,18 @@ function summarize(){
 }
 
 /* ---------- tapping ---------- */
-function scoringOn(){ return $('scoring').checked; }
+/* the scoring checkbox is commented out while we try the app without it, so
+   everything it drives has to cope with the control being absent */
+function scoringOn(){ const c=$('scoring'); return !!c && c.checked; }
 function updateScoringUI(){
   const on=scoringOn();
   $('pad').style.display=on?'':'none';
   $('legend').style.display=on?'flex':'none';
   $('result').style.display=on?'':'none';
+  $('calPanel').style.display=on?'':'none';
   $('pad').classList.toggle('hot', on && state.phase==='user');
 }
-$('scoring').addEventListener('change',updateScoringUI);
+if($('scoring')) $('scoring').addEventListener('change',updateScoringUI);
 function registerTap(){
   if(!ctx) return;
   const now=ctx.currentTime;
@@ -625,7 +637,7 @@ function registerTap(){
   if(!scoringOn()) return;
   const cy=state.cycle; if(!cy) return;
   if(now>cy.user-0.3 && now<cy.end+0.25){
-    if($('tapSound').checked) click(now,false,0.22);
+    if($('tapSound').checked) click(now,false,0.3);
     handleScoredTap(now);
     flashPad();
   }
@@ -647,7 +659,7 @@ $('calBtn').addEventListener('click',()=>{
   stopAll();
   const c=audio(); c.resume();
   const cb=60/100, n=10, start=c.currentTime+0.25;
-  for(let i=0;i<n;i++) click(start+i*cb, i===0, 0.5);
+  for(let i=0;i<n;i++) click(start+i*cb, i===0, 0.7);
   state.cal={start, beat:cb, n, taps:[]};
   setPhase('cal');
   $('calStatus').textContent='Tap along with every click…';
