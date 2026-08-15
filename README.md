@@ -10,7 +10,7 @@ Open `index.html` in a browser, or visit the GitHub Pages URL for this repositor
 
 ## How a cycle works
 
-1. A count-in bar of four clicks plays (first cycle only).
+1. A count-in bar plays, one click per beat of the current meter (first cycle only).
 2. The rhythm plays on cowbell while a gold playhead sweeps the notation.
 3. The same bar repeats in silence while a teal playhead sweeps. This is your pass.
 4. In continuous mode, the next rhythm appears and begins on the next beat.
@@ -19,6 +19,7 @@ Open `index.html` in a browser, or visit the GitHub Pages URL for this repositor
 
 - **Tempo** sets the beats per minute.
 - **Length** chooses one or two measures per rhythm.
+- **Time** sets the time signature: 2/4, 3/4, 4/4, 5/4, 6/4, or 7/4. The quarter note is the beat in all of them, so the tempo means the same thing in every meter. The staff shows the signature, the count-in runs one bar of it, and the metronome accents beat 1. Changing it mid-run takes effect on the next rhythm.
 - **Difficulty** picks the pool of rhythm figures. Each tier includes the ones below it.
   - *Basic*: quarter notes, eighth pairs, quarter rests.
   - *Standard*: adds half notes, dotted quarter plus eighth, and offbeat eighths.
@@ -27,7 +28,7 @@ Open `index.html` in a browser, or visit the GitHub Pages URL for this repositor
   - *Crazy*: adds five sixteenths over one beat, five eighths over two beats, and seven eighths over two beats.
 - **continuous** keeps generating new rhythms until you press Stop. Unchecked, one rhythm plays once and stops at results.
 - **cowbell on my pass** plays the rhythm again, quieter, during your pass so you can hear your offset against it.
-- **click on my pass** plays a metronome click during your pass.
+- **metronome** plays a quarter-note click through both passes, accented on beat 1. It can be turned on and off during a run and takes effect on the next beat.
 - **score my taps** turns on tap tracking. It is off by default.
 - **sound on my taps** plays a soft click on each tap when scoring is on.
 

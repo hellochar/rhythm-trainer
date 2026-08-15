@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cowbell Echo — Rhythm Sight-Reading Prototype</title>
+<title>Rhythm Trainer — Sight-Reading Prototype</title>
 <style>
   :root{
     --stage:#131a24;
@@ -30,7 +30,7 @@
   }
   header{width:100%;max-width:900px;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
   h1{font-size:clamp(20px,4vw,28px);font-weight:800;letter-spacing:-.02em}
-  h1 .bell{color:var(--brass)}
+  h1 .accent{color:var(--brass)}
   .sub{color:var(--text-dim);font-size:13px}
 
   .lamp{
@@ -96,7 +96,7 @@
 <body>
 <header>
   <div>
-    <h1>Cowbell <span class="bell">Echo</span></h1>
+    <h1>Rhythm <span class="accent">Trainer</span></h1>
     <div class="sub">It plays a notated rhythm on cowbell, then the same bar comes around again for you to play it back — in your head, on a practice pad, or with tap scoring turned on. New rhythms keep coming until you stop.</div>
   </div>
   <div class="lamp" id="lamp" data-p="ready"><span class="dot"></span><span id="lampText">READY</span></div>
@@ -112,6 +112,16 @@
   <label class="field">Length
     <select id="measures"><option value="1">1 measure</option><option value="2">2 measures</option></select>
   </label>
+  <label class="field">Time
+    <select id="timesig">
+      <option value="2">2/4</option>
+      <option value="3">3/4</option>
+      <option value="4" selected>4/4</option>
+      <option value="5">5/4</option>
+      <option value="6">6/4</option>
+      <option value="7">7/4</option>
+    </select>
+  </label>
   <label class="field">Difficulty
     <select id="difficulty">
       <option value="basic">Basic</option>
@@ -123,7 +133,7 @@
   </label>
   <label class="field"><input type="checkbox" id="continuous" checked> continuous</label>
   <label class="field"><input type="checkbox" id="echoSound"> cowbell on my pass</label>
-  <label class="field"><input type="checkbox" id="metOnUser"> click on my pass</label>
+  <label class="field"><input type="checkbox" id="metronome"> metronome</label>
   <label class="field"><input type="checkbox" id="scoring"> score my taps</label>
   <label class="field"><input type="checkbox" id="tapSound" checked> sound on my taps</label>
 </div>
@@ -192,11 +202,11 @@ function pickWeighted(list){
   for(const c of list){ r-=c.w; if(r<=0) return c; }
   return list[list.length-1];
 }
-function genMeasure(diff){
+function genMeasure(diff, bpb){
   for(let attempt=0; attempt<30; attempt++){
     const placed=[]; let pos=0;
-    while(pos<4){
-      const cands = pool(diff).filter(c => c.beats<=(4-pos) && (c.beats===1 || pos%2===0));
+    while(pos<bpb){
+      const cands = pool(diff).filter(c => c.beats<=(bpb-pos) && (c.beats===1 || pos%2===0));
       const c = pickWeighted(cands);
       placed.push({cell:c, start:pos});
       pos += c.beats;
@@ -204,13 +214,13 @@ function genMeasure(diff){
     const onsets = placed.flatMap(p=>p.cell.ev).filter(e=>!e.rest).length;
     if(onsets>=2) return placed;
   }
-  return [{cell:CELLS.basic[0],start:0},{cell:CELLS.basic[0],start:1},{cell:CELLS.basic[0],start:2},{cell:CELLS.basic[0],start:3}];
+  return Array.from({length:bpb},(_,i)=>({cell:CELLS.basic[0], start:i}));
 }
-function genRhythm(measures, diff){
-  const ms=[]; for(let i=0;i<measures;i++) ms.push(genMeasure(diff));
+function genRhythm(measures, diff, bpb){
+  const ms=[]; for(let i=0;i<measures;i++) ms.push(genMeasure(diff, bpb));
   const events=[];
   ms.forEach((m,mi)=>m.forEach(p=>{
-    let t=mi*4+p.start;
+    let t=mi*bpb+p.start;
     const grouped = p.cell.beam || p.cell.bracket;
     p.cell.ev.forEach(e=>{
       events.push({t, d:e.d, g:e.g, rest:!!e.rest, flag:!!e.flag,
@@ -219,24 +229,32 @@ function genRhythm(measures, diff){
       t+=e.d;
     });
   }));
-  return {measures, events, onsets:events.filter(e=>!e.rest).map(e=>e.t)};
+  return {measures, bpb, events, onsets:events.filter(e=>!e.rest).map(e=>e.t)};
 }
 
 /* ---------- notation rendering (SVG) ---------- */
-const MW=350, PADL=20, Y=76;
-function xOf(beat){ const mi=Math.floor(beat/4), f=(beat-mi*4)/4;
-  return PADL + mi*MW + 16 + f*(MW-44); }
+const PADL=20, SIGW=32, MPAD=44, BEATW=76.5, Y=76;
+/* layout follows the rendered rhythm's meter: LB beats per measure, MW wide */
+let LB=4, MW=MPAD+4*BEATW;
+function setLayout(bpb){ LB=bpb; MW=MPAD+bpb*BEATW; }
+function xOf(beat){ const mi=Math.floor(beat/LB), f=(beat-mi*LB)/LB;
+  return PADL + SIGW + mi*MW + 16 + f*(MW-MPAD); }
 function renderRhythm(r){
-  const W = PADL*2 + r.measures*MW, H=134;
+  setLayout(r.bpb);
+  const W = PADL*2 + SIGW + r.measures*MW, H=134;
   let s='';
   s+=`<line x1="${PADL}" y1="${Y}" x2="${W-PADL}" y2="${Y}" stroke="var(--ink)" stroke-width="1.4"/>`;
   for(let mi=0;mi<=r.measures;mi++){
-    const bx=PADL+mi*MW;
+    const bx = mi===0 ? PADL : PADL+SIGW+mi*MW;
     s+=`<line x1="${bx}" y1="${Y-30}" x2="${bx}" y2="${Y+12}" stroke="var(--ink)" stroke-width="${mi===r.measures?3:1.6}"/>`;
     if(mi===r.measures) s+=`<line x1="${bx-5}" y1="${Y-30}" x2="${bx-5}" y2="${Y+12}" stroke="var(--ink)" stroke-width="1.4"/>`;
   }
-  for(let b=0;b<r.measures*4;b++){
-    s+=`<text x="${xOf(b)}" y="${Y+34}" font-size="11" fill="#00000045" text-anchor="middle" font-family="ui-monospace,monospace">${b%4+1}</text>`;
+  // time signature, numerals stacked over the opening of the staff
+  [[r.bpb, Y-4],[4, Y+17]].forEach(([n,ty])=>{
+    s+=`<text x="${PADL+18}" y="${ty}" font-size="21" font-weight="700" fill="var(--ink)" text-anchor="middle" font-family="Georgia,'Times New Roman',serif">${n}</text>`;
+  });
+  for(let b=0;b<r.measures*r.bpb;b++){
+    s+=`<text x="${xOf(b)}" y="${Y+34}" font-size="11" fill="#00000045" text-anchor="middle" font-family="ui-monospace,monospace">${b%r.bpb+1}</text>`;
   }
   // beam / bracket groups
   const groups={};
@@ -303,10 +321,11 @@ function addMark(html){
 }
 
 /* ---------- audio ---------- */
-let ctx=null, master=null;
+let ctx=null, master=null, metBus=null;
 function audio(){
   if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); }
   if(!master){ master=ctx.createGain(); master.connect(ctx.destination); }
+  if(!metBus){ metBus=ctx.createGain(); metBus.connect(master); syncMet(); }
   return ctx;
 }
 function cowbell(at, vol=0.7){
@@ -320,15 +339,23 @@ function cowbell(at, vol=0.7){
   });
   bp.connect(g); g.connect(master);
 }
-function click(at, hi=false, vol=0.5){
+function click(at, hi=false, vol=0.5, dest=null){
   const c=audio(), o=c.createOscillator(), g=c.createGain();
   o.type='sine'; o.frequency.value=hi?1350:900;
   g.gain.setValueAtTime(vol, at);
   g.gain.exponentialRampToValueAtTime(0.001, at+0.07);
-  o.connect(g); g.connect(master); o.start(at); o.stop(at+0.09);
+  o.connect(g); g.connect(dest||master); o.start(at); o.stop(at+0.09);
+}
+/* Metronome clicks are always scheduled and ride their own bus, so the
+   checkbox mutes and unmutes beats that were scheduled a bar ago. */
+function met(at, hi){ audio(); click(at, hi, hi?0.34:0.22, metBus); }
+function syncMet(){
+  if(!metBus||!ctx) return;
+  metBus.gain.setTargetAtTime($('metronome').checked?1:0, ctx.currentTime, 0.005);
 }
 function killAudio(){
-  if(master){ try{master.disconnect();}catch(e){} master=null; }
+  if(master){ try{master.disconnect();}catch(e){} }
+  master=null; metBus=null;
 }
 
 /* ---------- state / flow ---------- */
@@ -341,14 +368,14 @@ function setPhase(p){
   $('lamp').dataset.p=p; $('lampText').textContent=PHASE_TEXT[p];
   $('pad').classList.toggle('hot', p==='user' && $('scoring').checked);
 }
-function makeRhythm(){ return genRhythm(+$('measures').value, $('difficulty').value); }
+function makeRhythm(){ return genRhythm(+$('measures').value, $('difficulty').value, +$('timesig').value); }
 
 function scheduleCycle(r, start, beat){
-  const total=r.measures*4;
+  const total=r.measures*r.bpb;
   r.onsets.forEach(b=>cowbell(start+b*beat));
   const user=start+total*beat, end=user+total*beat;
   if($('echoSound').checked) r.onsets.forEach(b=>cowbell(user+b*beat, 0.45));
-  if($('metOnUser').checked) for(let i=0;i<total;i++) click(user+i*beat, i%4===0, 0.16);
+  for(let i=0;i<total*2;i++) met(start+i*beat, i%r.bpb===0);
   return {rhythm:r, listen:start, user, end};
 }
 function prepareExpected(){
@@ -368,9 +395,9 @@ function startRun(fresh, single){
   const bpm=+$('tempo').value||90;
   state.beat=60/bpm;
   state.single=single;
-  const t0=c.currentTime+0.18;
-  for(let i=0;i<4;i++) click(t0+i*state.beat, i===0, 0.5);
-  state.cycle=scheduleCycle(state.rhythm, t0+4*state.beat, state.beat);
+  const t0=c.currentTime+0.18, bpb=state.rhythm.bpb;
+  for(let i=0;i<bpb;i++) click(t0+i*state.beat, i===0, 0.5);
+  state.cycle=scheduleCycle(state.rhythm, t0+bpb*state.beat, state.beat);
   state.pending=null;
   prepareExpected();
   setPhase('count');
@@ -414,7 +441,7 @@ function loop(){
 function setIf(p){ if(state.phase!==p) setPhase(p); }
 function movePlayhead(ph, beatPos, color){
   if(!ph) return;
-  const x=xOf(Math.min(Math.max(beatPos,0), state.rhythm.measures*4-0.001));
+  const x=xOf(Math.min(Math.max(beatPos,0), state.rhythm.measures*state.rhythm.bpb-0.001));
   ph.setAttribute('x1',x); ph.setAttribute('x2',x);
   ph.setAttribute('stroke',color); ph.setAttribute('opacity','0.85');
 }
@@ -452,7 +479,7 @@ function handleScoredTap(now){
       `<text x="${cx}" y="${Y+34+14}" font-size="10" fill="#00000070" text-anchor="middle" font-family="ui-monospace,monospace">${best.delta>0?'+':''}${Math.round(best.delta)}</text>`);
   } else {
     state.extras++;
-    const b=Math.max(0,Math.min((adj-cy.user)/state.beat, state.rhythm.measures*4-0.01));
+    const b=Math.max(0,Math.min((adj-cy.user)/state.beat, state.rhythm.measures*state.rhythm.bpb-0.01));
     addMark(`<text x="${xOf(b)}" y="${Y+22}" font-size="13" fill="var(--bad)" text-anchor="middle" font-weight="bold">✕</text>`);
   }
 }
@@ -533,6 +560,7 @@ function finishCal(){
 }
 
 /* ---------- buttons ---------- */
+$('metronome').addEventListener('change',syncMet);
 $('startBtn').addEventListener('click',()=>startRun(true, !$('continuous').checked));
 $('replayBtn').addEventListener('click',()=>startRun(false, true));
 $('stopBtn').addEventListener('click',()=>stopAll());
