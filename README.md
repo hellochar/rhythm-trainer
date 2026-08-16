@@ -21,6 +21,14 @@ The word above the staff tells you which pass you are in. At rest it says nothin
 
 **Retry ↺** puts the bar you just missed back in front of you and loops it until you switch it off. It picks the bar you last played, or the one you are playing now if you are more than halfway through your own pass, so you can reach for it the moment a bar goes wrong without having to catch it in time. It also switches on the loop button in the top-right corner of the staff; press that again to go back to fresh rhythms.
 
+## Changing a beat
+
+Tap any beat of the bar on the staff and a picker opens under it, showing every figure that could go there. Tap one and it takes that beat's place immediately, notation and sound both. The picker stays open, so you can try the alternatives against each other and stop on the one you want.
+
+A tap means the figure covering that beat, so tapping either half of a two-beat figure offers a replacement for the whole of it, and the beats it occupies are shaded while the picker is open. What you are offered is what would fit: a figure has to sit inside the measure and start where its length divides the beat, so on beat 1 of 4/4 you can reach for a whole note and on beat 2 only the one-beat figures. Every figure in the library is offered, whether or not it is selected in the **Rhythm figures** panel — that panel is for what gets generated, and this is you choosing directly. Swapping a long figure for a short one leaves the rest of its beats as quarter notes, and swapping a short one for a long one takes over the beats it needs.
+
+Editing a bar switches the loop button on, the way Retry and loading a saved bar do, so the bar you have just built stays in front of you rather than being replaced on the next start. Edit during a run and the music follows within the bar. The picker closes when the bar underneath it changes for any other reason, and Escape or a tap outside closes it too.
+
 ## Saved bars
 
 The **☆** in the top-left corner of the staff keeps the bar in front of you, along with the tempo you were reading it at. The star fills in once a bar is saved, and tapping it again drops that bar, so it tells you at a glance whether what you are looking at is one you already kept.
