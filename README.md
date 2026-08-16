@@ -6,7 +6,7 @@ The whole app is one file, `index.html`, with no dependencies and no build step.
 
 ## Running it
 
-Open `index.html` in a browser, or visit the GitHub Pages URL for this repository. Press the **▶** in the middle of the tempo dial to begin, and the same button stops it again. It plays the bar already on the staff — nothing reshuffles it behind your back. Browsers require a tap or click before they allow audio, and that button satisfies that. While a run is going the app holds a screen wake lock where the browser supports one, so a phone left alone on a music stand does not dim and sleep between bars.
+Open `index.html` in a browser, or visit the GitHub Pages URL for this repository. Press the **▶** in the middle of the tempo dial to begin, and the same button stops it again. Each start deals a fresh rhythm unless the loop button is on. Browsers require a tap or click before they allow audio, and that button satisfies that. While a run is going the app holds a screen wake lock where the browser supports one, so a phone left alone on a music stand does not dim and sleep between bars.
 
 ## How a cycle works
 
@@ -35,14 +35,14 @@ The **×** on a group clears it, or selects all of it when it is already empty. 
 
 A figure is only placed where its length divides the beat position, so two-beat figures start on odd-numbered beats and three-beat figures on beats 1 and 4. Figures longer than the bar (a whole note in 3/4, say) are simply never placed, and a beat that nothing fits gets a quarter note. Bars are regenerated until they hold at least two notes, so a selection of only long or silent figures can still yield a sparse bar.
 
-While nothing is playing, the staff previews what your current settings produce. It rerolls when you change something that changes what can be generated — the figures, the meter, the length — and stays put for everything else, so a nudge of a volume slider or a press of Start does not throw away the bar you were reading.
+While nothing is playing, the staff previews what your current settings produce. It rerolls when you change something that changes what can be generated — the figures, the meter, the length — and when you press Start, and it stays put for everything else, so a nudge of a volume slider does not throw away the bar you were reading. With the loop button on, Start keeps the bar in front of you instead.
 
 A two-measure rhythm sits on one staff on a wide window and stacks onto two rows when the window is too narrow to read it, which is what phones get.
 
 ## Settings
 
 - **The tempo dial** sets the beats per minute, from 40 to 200. Turn the dial anywhere on its face to sweep the tempo, tap **‹** and **›** for one beat at a time (hold them to run), or — where there is a keyboard — click the number and type one. The current tempo is on the dial itself and the teal ring shows where it sits in the range. A change takes effect immediately: whatever is playing bends to the new tempo without stopping or losing its place, count-in included.
-- **tap tempo**, under the dial, sets the tempo from your own tapping. Tap it a few times in time and the dial follows the spacing of the last few taps; leave off for a couple of seconds and the next tap starts a new measurement.
+- **tap tempo** sets the tempo from your own tapping. Tap it a few times in time and the dial follows the spacing of the last few taps; leave off for a couple of seconds and the next tap starts a new measurement. Every tap clicks back at you, whether or not the metronome is on. It sits under the dial on a wide window, and on a phone it moves out to the dial's bottom-right corner at the edge of the page, sized for a thumb.
 - **Length** chooses one or two measures per rhythm.
 - **Time** sets the time signature: 2/4, 3/4, 4/4, 5/4, 6/4, or 7/4. The quarter note is the beat in all of them, so the tempo means the same thing in every meter. The staff shows the signature, the count-in runs one bar of it, and the metronome accents beat 1. Changing it mid-run takes effect on the next rhythm.
 - **continuous** keeps generating new rhythms until you press Stop. Unchecked, one rhythm plays once and stops at results.
@@ -51,7 +51,7 @@ A two-measure rhythm sits on one staff on a wide window and stacks onto two rows
 - **The two sound rows** — a cowbell for the rhythm and a metronome for the click — each have an icon and a volume slider. Tapping an icon mutes that sound outright and the row dims; moving its slider brings it back. Both are live: they reach sounds that were already scheduled, so a change is audible on the next note. Both scales mean the same thing, so 100 on one is as loud as 100 on the other. The metronome is on by default at 30, so it sits under the cowbell. On a wide enough window the rows are labelled `rhythm` and `metronome`.
 - **cowbell on my pass** plays the rhythm again, quieter, during your pass so you can hear your offset against it.
 - **score my taps** turns on tap tracking, and reveals the tap pad, the legend, the results line and the calibration panel. It is currently commented out in `index.html` while the app is being tried without it; uncommenting that one line brings all of it back.
-- **sound on my taps** plays a soft click on each tap when scoring is on.
+- **sound on my taps** plays a soft click on each tap. It only ever applies to a scored tap, so it appears with the rest of the scoring controls and is hidden while tap scoring is parked.
 
 ## Scoring
 
