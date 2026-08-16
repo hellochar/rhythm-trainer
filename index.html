@@ -519,7 +519,7 @@ const GROUPS = [
   ]},
   /* A thirty-second carries three beams, so the beam rows are drawn per level
      rather than one primary and one sixteenth row; see BEAMS. */
-  {name:'Thirty-seconds', cells:[
+  {name:'32nds', cells:[
     {id:'x8',   w:1.5, beats:1, beam:true, ev:[
       {d:.125,g:'x'},{d:.125,g:'x'},{d:.125,g:'x'},{d:.125,g:'x'},
       {d:.125,g:'x'},{d:.125,g:'x'},{d:.125,g:'x'},{d:.125,g:'x'}]},
@@ -543,11 +543,17 @@ const GROUPS = [
     {id:'t3ree', w:1.5, beats:1, bracket:true, tn:3, ev:[{d:1/3,g:'er',rest:true},{d:1/3,g:'e',flag:true},{d:1/3,g:'e',flag:true}]},
     {id:'t3ere', w:1.5, beats:1, bracket:true, tn:3, ev:[{d:1/3,g:'e',flag:true},{d:1/3,g:'er',rest:true},{d:1/3,g:'e',flag:true}]},
     {id:'t3eer', w:1.5, beats:1, bracket:true, tn:3, ev:[{d:1/3,g:'e',flag:true},{d:1/3,g:'e',flag:true},{d:1/3,g:'er',rest:true}]},
-    /* A sixteenth triplet is half a beat, and a figure has to fill whole ones,
-       so it comes paired with the eighth beside it. `bs` keeps that eighth out
-       of the triplet's beam: it stands on its own with a flag, and the 3 sits
-       over the three sixteenths alone rather than over the whole beat, which is
-       the point of writing it this way. */
+    {id:'t3q',   w:2, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'q'},{d:2/3,g:'q'}]},
+    {id:'t3rqq', w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'qr',rest:true},{d:2/3,g:'q'},{d:2/3,g:'q'}]},
+    {id:'t3qrq', w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'qr',rest:true},{d:2/3,g:'q'}]},
+    {id:'t3qqr', w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'q'},{d:2/3,g:'qr',rest:true}]},
+  ]},
+  /* A 16th note triplet is half a beat, and a figure has to fill whole ones, so
+     it comes paired with whatever shares its beat. `bs` keeps that eighth out of
+     the triplet's beam: it stands on its own with a flag, and the 3 sits over
+     the three sixteenths alone rather than over the whole beat, which is the
+     point of writing it this way. */
+  {name:'16th Note Triplets', cells:[
     {id:'t3se', w:1.5, beats:1, beam:true, tn:3, ev:[
       {d:1/6,g:'s',bs:0},{d:1/6,g:'s',bs:0},{d:1/6,g:'s',bs:0},{d:.5,g:'e',flag:true,bs:1}]},
     {id:'et3s', w:1.5, beats:1, beam:true, tn:3, ev:[
@@ -560,10 +566,6 @@ const GROUPS = [
        numbered 6, not two triplets of three */
     {id:'t6s', w:1.5, beats:1, beam:true, tn:6, ev:[
       {d:1/6,g:'s'},{d:1/6,g:'s'},{d:1/6,g:'s'},{d:1/6,g:'s'},{d:1/6,g:'s'},{d:1/6,g:'s'}]},
-    {id:'t3q',   w:2, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'q'},{d:2/3,g:'q'}]},
-    {id:'t3rqq', w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'qr',rest:true},{d:2/3,g:'q'},{d:2/3,g:'q'}]},
-    {id:'t3qrq', w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'qr',rest:true},{d:2/3,g:'q'}]},
-    {id:'t3qqr', w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'q'},{d:2/3,g:'qr',rest:true}]},
   ]},
   {name:'Quintuplets', cells:[
     {id:'t5s', w:2, beats:1, beam:true, tn:5, ev:[{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'}]},
