@@ -21,6 +21,14 @@ The word above the staff tells you which pass you are in. At rest it says nothin
 
 **Retry ↺** puts the bar you just missed back in front of you and loops it until you switch it off. It picks the bar you last played, or the one you are playing now if you are more than halfway through your own pass, so you can reach for it the moment a bar goes wrong without having to catch it in time. It also switches on the loop button in the top-right corner of the staff; press that again to go back to fresh rhythms.
 
+## Saved bars
+
+The **☆** in the top-left corner of the staff keeps the bar in front of you, along with the tempo you were reading it at. The star fills in once a bar is saved, and tapping it again drops that bar, so it tells you at a glance whether what you are looking at is one you already kept.
+
+Saved bars collect in the **Saved bars** panel, each drawn as its own small staff so you can pick one out by its notation rather than by a name. Tapping one loads it back: the bar returns to the staff, the tempo goes back to what it was saved at, and the meter and the length come with it. It also switches the loop button on, the way Retry does, so the bar stays in front of you instead of being replaced by a fresh one on the next start. Load one while a run is going and the music restarts on it at its own tempo. The **×** on a card removes it.
+
+They are kept in browser local storage, separately from the settings, and the newest sixty are held.
+
 ## Rhythm figures
 
 The **Rhythm figures** panel lists every figure the generator can use, grouped by kind, each with its notation. A figure has three states, and tapping it moves to the next one:
@@ -60,7 +68,7 @@ With **score my taps** on, a tap pad appears and the space bar also registers ta
 
 ## Saved settings
 
-Every control, including the figure selection and the volume sliders, is written to browser local storage and restored on the next visit. Nothing is sent anywhere. If storage is unavailable the app still runs, it just starts from the defaults each time.
+Every control, including the figure selection and the volume sliders, is written to browser local storage and restored on the next visit. Saved bars go to a key of their own beside it. Nothing is sent anywhere. If storage is unavailable the app still runs, it just starts from the defaults each time and saved bars last only as long as the tab does.
 
 ## Input delay calibration
 

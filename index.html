@@ -40,7 +40,8 @@
     padding:8px 10px 8px;position:relative;
   }
   .chart svg{display:block;width:100%;height:auto}
-  /* the strip along the top of the paper: phase readout centred, loop at the right */
+  /* the strip along the top of the paper: star at the left, phase readout
+     centred, loop at the right */
   .stage{position:relative;height:28px}
   .stat{
     position:absolute;left:36px;right:36px;top:3px;height:22px;line-height:22px;
@@ -59,6 +60,37 @@
   .loopbtn svg{width:19px;height:19px}
   .loopbtn:hover{filter:none;color:var(--ink)}
   .loopbtn[aria-pressed=true]{color:var(--teal);background:#2d8b7a1c;border-color:#2d8b7a55}
+  .favbtn{
+    position:absolute;left:0;top:0;width:30px;height:30px;padding:0;
+    background:none;border:1px solid transparent;border-radius:8px;color:#00000050;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .favbtn svg{width:20px;height:20px}
+  .favbtn:hover{filter:none;color:var(--ink)}
+  .favbtn[aria-pressed=true]{
+    color:var(--brass-deep);
+    background:color-mix(in srgb,var(--brass) 16%,transparent);
+    border-color:color-mix(in srgb,var(--brass) 45%,transparent);
+  }
+  .favbtn[aria-pressed=true] svg{fill:var(--brass)}
+
+  /* ----- saved bars ----- */
+  .favlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:10px}
+  .favcard{position:relative;border:1px solid #00000026;border-radius:10px;background:#ffffff5c;padding:3px}
+  .favload{
+    display:block;width:100%;padding:2px 4px 3px;text-align:left;
+    font:inherit;font-weight:400;background:none;color:var(--text-dim);border-radius:8px;
+  }
+  .favload:hover{filter:none;background:#00000008}
+  /* one fixed box for every thumbnail, whatever the meter: the notation scales
+     to fit inside it, so a row of cards lines up instead of stepping */
+  .favload svg{display:block;width:100%;height:66px}
+  .favmeta{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.04em}
+  .favdel{
+    position:absolute;right:5px;bottom:5px;padding:1px 8px;font-size:13px;line-height:1.4;
+    font-weight:400;background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:6px;
+  }
+  .favempty{margin-top:10px;font-size:13px;color:var(--text-dim)}
 
   .controls{width:100%;max-width:900px;margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   button{
@@ -234,6 +266,11 @@
 
 <div class="chart">
   <div class="stage">
+    <button type="button" class="favbtn" id="favBtn" aria-pressed="false" aria-label="save this bar" title="save this bar and its tempo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M12 3.2l2.7 5.6 6.1.85-4.45 4.3 1.07 6.05L12 17.15 6.58 20l1.07-6.05L3.2 9.65l6.1-.85z"/>
+      </svg>
+    </button>
     <div class="stat" id="stat"></div>
     <button type="button" class="loopbtn" id="loopBtn" aria-pressed="false" aria-label="loop the same bar" title="loop the same bar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">
@@ -313,6 +350,12 @@
   <!-- <label class="field"><input type="checkbox" id="scoring"> score my taps</label> -->
   <label class="field" id="tapSoundField"><input type="checkbox" id="tapSound" checked> sound on my taps</label>
 </div>
+
+<details class="panel" id="favPanel">
+  <summary>Saved bars <span class="status" id="favCount"></span></summary>
+  <div class="favlist" id="favList"></div>
+  <div class="favempty" id="favEmpty">Nothing saved yet. Tap the ☆ above the staff to keep the bar in front of you, along with its tempo.</div>
+</details>
 
 <div class="panel">
   <div class="paneltitle">Rhythm figures <span class="status" id="figCount"></span></div>
@@ -528,6 +571,13 @@ function yPlay(beat){
 }
 function renderRhythm(r){
   setLayout(r.bpb, r.measures);
+  document.getElementById('score').innerHTML = staffSvg(r, {live:true});
+  syncFav();
+}
+/* Builds the staff for a rhythm under the layout already set. `live` adds the
+   playhead and the marker layer, which only the staff itself wants; `trim`
+   crops the empty air above the staff, for the saved-bar thumbnails. */
+function staffSvg(r, {live=false, trim=false}={}){
   const rows=Math.ceil(r.measures/PERROW);
   const W = PADL*2 + SIGW + Math.min(r.measures,PERROW)*MW;
   const H = Y + (rows-1)*ROWH + 58;
@@ -551,10 +601,12 @@ function renderRhythm(r){
     }
   }
   s+=drawEvents(r.events, xOf, yOf);
-  s+=`<line id="playhead" x1="-10" y1="${Y-56}" x2="-10" y2="${Y+22}" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
-  s+=`<g id="markers"></g>`;
-  document.getElementById('score').innerHTML =
-    `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  if(live){
+    s+=`<line id="playhead" x1="-10" y1="${Y-56}" x2="-10" y2="${Y+22}" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
+    s+=`<g id="markers"></g>`;
+  }
+  const y0 = trim ? Y-62 : 0;      // nothing is drawn above a tuplet's number
+  return `<svg viewBox="0 ${y0} ${W} ${H-y0}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
 }
 /* Draws beams, brackets, noteheads and rests for a list of events.
    `xf` maps a beat position to x and `yf` maps it to its staff line, since the
@@ -1077,6 +1129,89 @@ function retryRun(){
   startRun(false);
 }
 
+/* ---------- saved bars ---------- */
+/* A saved bar is the rhythm exactly as it was generated, plus the tempo it was
+   read at. It lives in its own storage key rather than in the settings, since
+   the list grows and the settings do not; newest first, oldest off the end. */
+const FAV_KEY='rhythm-trainer-favs', FAV_MAX=60;
+let favs=[];
+/* what makes two bars the same bar: the meter, the length and the notes */
+function favKey(r){
+  return r.measures+'/'+r.bpb+':'+
+    r.events.map(e=>e.t.toFixed(3)+e.g+(e.rest?'r':'')).join(',');
+}
+function loadFavs(){
+  try{
+    const a=JSON.parse(localStorage.getItem(FAV_KEY)||'[]');
+    favs = Array.isArray(a) ? a.filter(f=>f&&f.rhythm&&Array.isArray(f.rhythm.events)) : [];
+  }catch(e){ favs=[]; }
+}
+function saveFavs(){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }catch(e){} }
+/* The thumbnails go through the same staff builder as the staff itself, so the
+   layout globals have to point at the saved bar while one is drawn. They are
+   only valid for the rhythm on the staff, so what was there is put back. */
+function favSvg(r){
+  const keep=[LB,MW,RM,PERROW];
+  setLayout(r.bpb, r.measures);
+  PERROW=r.measures;                       // a thumbnail is small already; never stack it
+  const s=staffSvg(r, {trim:true});
+  LB=keep[0]; MW=keep[1]; RM=keep[2]; PERROW=keep[3];
+  return s;
+}
+function syncFav(){
+  const on = !!state.rhythm && favs.some(f=>f.key===favKey(state.rhythm));
+  const b=$('favBtn'), t = on ? 'saved — tap to remove it' : 'save this bar and its tempo';
+  b.setAttribute('aria-pressed', on);
+  b.title=t; b.setAttribute('aria-label', t);
+}
+function buildFavs(){
+  $('favList').innerHTML = favs.map((f,i)=>
+    `<div class="favcard">`+
+      `<button type="button" class="favload" data-i="${i}" title="load this bar at ${f.bpm} BPM">`+
+        favSvg(f.rhythm)+
+        `<span class="favmeta">${f.bpm} BPM · ${f.rhythm.bpb}/4`+
+          (f.rhythm.measures>1?` · ${f.rhythm.measures} bars`:'')+`</span>`+
+      `</button>`+
+      `<button type="button" class="favdel" data-i="${i}" title="remove this bar" aria-label="remove this bar">×</button>`+
+    `</div>`).join('');
+  $('favEmpty').style.display = favs.length ? 'none' : '';
+  $('favCount').textContent = favs.length ? `— ${favs.length} saved` : '';
+}
+function toggleFav(){
+  const r=state.rhythm; if(!r) return;
+  const k=favKey(r), i=favs.findIndex(f=>f.key===k);
+  if(i>=0) favs.splice(i,1);
+  else{
+    const first=!favs.length;
+    favs.unshift({key:k, bpm:getTempo(), rhythm:JSON.parse(JSON.stringify(r))});
+    if(favs.length>FAV_MAX) favs.length=FAV_MAX;
+    if(first) $('favPanel').open=true;      // so the first one is seen landing
+  }
+  saveFavs(); buildFavs(); syncFav();
+}
+/* Loading one puts back its meter, its length and its tempo as well, and turns
+   the loop on the way Retry does: without that the next Start would deal a
+   fresh bar over the one just loaded. */
+function loadFav(i){
+  const f=favs[i]; if(!f) return;
+  const r=JSON.parse(JSON.stringify(f.rhythm));
+  $('measures').value=r.measures;
+  if([...$('timesig').options].some(o=>+o.value===r.bpb)) $('timesig').value=r.bpb;
+  $('replay').checked=true; syncLoop();
+  setTempo(f.bpm);
+  state.rhythm=r; state.prev=null;
+  saveSettings();
+  if(isRunning()) startRun(false);
+  else{ renderRhythm(r); $('result').innerHTML=''; }
+}
+$('favBtn').addEventListener('click', toggleFav);
+$('favList').addEventListener('click',e=>{
+  const d=e.target.closest('.favdel');
+  if(d){ favs.splice(+d.dataset.i,1); saveFavs(); buildFavs(); syncFav(); return; }
+  const l=e.target.closest('.favload');
+  if(l) loadFav(+l.dataset.i);
+});
+
 /* ---------- settings persistence ---------- */
 /* Storage can be unavailable (the artifact viewer blocks it), so every access
    is guarded and the app just runs with defaults when it fails. */
@@ -1308,6 +1443,8 @@ window.addEventListener('resize',()=>{
 buildFigs();
 buildDial();
 loadSettings();
+loadFavs();
+buildFavs();
 syncFigs();
 syncVol();
 syncLoop();
