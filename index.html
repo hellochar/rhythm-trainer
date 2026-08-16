@@ -156,18 +156,13 @@
     transform:rotate(45deg);
   }
   .beatpop.above .bpcaret{top:auto;bottom:-6px;transform:rotate(225deg)}
-  .bphead{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-    font-size:11.5px;letter-spacing:.14em;color:var(--text-dim);
-  }
+  .bphead{display:flex;justify-content:flex-end}
   .bpclose{
     padding:0 7px;font-size:16px;line-height:1.4;font-weight:400;
     background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:7px;
   }
   .bpbody{max-height:min(48vh,340px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}
-  .bpgroup{margin-top:9px;font-size:11px;letter-spacing:.04em;color:var(--text-dim)}
-  .bpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;margin-top:4px}
+  .bpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;margin-top:6px}
   .bpopt{
     display:flex;align-items:center;justify-content:center;padding:2px 4px;
     background:#00000010;border:1px solid #00000033;border-radius:9px;
@@ -379,7 +374,6 @@
 <div class="beatpop" id="beatPop" role="dialog" aria-label="replace this beat" hidden>
   <div class="bpcaret" id="bpCaret"></div>
   <div class="bphead">
-    <span id="bpTitle">BEAT 1</span>
     <button type="button" class="bpclose" id="bpClose" aria-label="close">×</button>
   </div>
   <div class="bpbody" id="bpBody"></div>
@@ -552,6 +546,9 @@ const FILL = {id:'_fill', w:1, beats:1, ev:[{d:1,g:'q'}]};
    can put a different one in their place */
 const CELL_BY_ID = Object.fromEntries([...ALL_CELLS, FILL].map(c=>[c.id,c]));
 function cellById(id){ return CELL_BY_ID[id] || FILL; }
+/* the only human-readable name a figure has, which is what the beat editor
+   labels its options with now that it does not show the groups */
+const GROUP_OF = Object.fromEntries(GROUPS.flatMap(g=>g.cells.map(c=>[c.id, g.name])));
 
 /* Each figure is off, on, or guaranteed ('must'); the guaranteed ones are also
    part of the ordinary pool, they just get a reserved slot in every measure. */
@@ -1328,17 +1325,11 @@ function openEditor(beat, anchor){
   const bpb=r.bpb, mi=Math.floor(cur.start/bpb);
   const pos=cur.start-mi*bpb, room=bpb-pos;
   edit={start:cur.start, span:cellById(cur.id).beats};
-  let html='';
-  GROUPS.forEach(g=>{
-    const fits=g.cells.filter(c=>fitsAt(c, pos, room));
-    if(!fits.length) return;
-    html+=`<div class="bpgroup">${g.name}</div><div class="bpgrid">`+
-      fits.map(c=>`<button type="button" class="bpopt" data-id="${c.id}"`+
-        ` aria-pressed="${c.id===cur.id}" aria-label="${g.name}">${cellPreview(c)}</button>`).join('')+
-      `</div>`;
-  });
-  $('bpBody').innerHTML=html;
-  $('bpTitle').textContent = (r.measures>1 ? `BAR ${mi+1} · ` : '')+`BEAT ${pos+1}`;
+  $('bpBody').innerHTML='<div class="bpgrid">'+
+    ALL_CELLS.filter(c=>fitsAt(c, pos, room)).map(c=>
+      `<button type="button" class="bpopt" data-id="${c.id}"`+
+      ` aria-pressed="${c.id===cur.id}" aria-label="${GROUP_OF[c.id]}">${cellPreview(c)}</button>`
+    ).join('')+'</div>';
   $('beatPop').hidden=false;
   placeEditor(anchor);
   markEditedBeat();
@@ -1387,8 +1378,8 @@ function markEditedBeat(){
   sel.setAttribute('opacity','1');
 }
 /* Everything the new cell overlaps comes out, and whatever that leaves empty
-   goes back to quarter notes, so the bar is always full however the lengths
-   worked out. */
+   becomes quarter rests, so the bar is always full however the lengths worked
+   out and the beats you did not ask for stay silent. */
 function replaceCell(r, start, id){
   const bpb=r.bpb, nc=cellById(id), mi=Math.floor(start/bpb), pos=start-mi*bpb;
   const list=rhythmCells(r);
@@ -1397,7 +1388,7 @@ function replaceCell(r, start, id){
   kept.push({id, start});
   const taken=new Set();
   kept.forEach(c=>{ for(let b=c.start; b<c.start+cellById(c.id).beats; b++) taken.add(b); });
-  for(let b=0; b<r.measures*bpb; b++) if(!taken.has(b)) kept.push({id:'q', start:b});
+  for(let b=0; b<r.measures*bpb; b++) if(!taken.has(b)) kept.push({id:'qr', start:b});
   return rhythmFromCells(r.measures, bpb, kept);
 }
 /* A bar you have edited is one you meant to keep, so the loop goes on the way
@@ -1407,7 +1398,7 @@ function applyEdit(id){
   if(!edit) return;
   const nr=replaceCell(state.rhythm, edit.start, id);
   if(!nr) return;
-  edit.span=cellById(id).beats;                  // the tint covers what is there now
+  closeEditor();
   state.rhythm=nr; state.prev=null;
   if(!$('replay').checked){ $('replay').checked=true; syncLoop(); }
   saveSettings();
@@ -1420,9 +1411,6 @@ function applyEdit(id){
     reschedule(false);
     prepareExpected();
   }
-  $('bpBody').querySelectorAll('.bpopt').forEach(b=>{
-    b.setAttribute('aria-pressed', b.dataset.id===id);
-  });
 }
 $('score').addEventListener('click',e=>{
   const h=e.target.closest('.beathit');
