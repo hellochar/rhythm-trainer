@@ -271,6 +271,9 @@
   .figs{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
     gap:12px;margin-top:12px;
+    /* the groups are very different sizes, so let each box be its own height
+       rather than stretching every one to the tallest in its row */
+    align-items:start;
   }
   .figgroup{border:1px solid #00000026;border-radius:10px;padding:4px 12px 12px}
   .figgroup legend{
@@ -509,14 +512,30 @@ const GROUPS = [
     {id:'ess', w:3, beats:1, beam:true, ev:[{d:.5,g:'e'},{d:.25,g:'s'},{d:.25,g:'s'}]},
     {id:'ses', w:3, beats:1, beam:true, ev:[{d:.25,g:'s'},{d:.5,g:'e'},{d:.25,g:'s'}]},
   ]},
-  {name:'Tuplets', cells:[
-    {id:'t3e', w:3, beats:1, beam:true, tn:3, ev:[{d:1/3,g:'e'},{d:1/3,g:'e'},{d:1/3,g:'e'}]},
-    {id:'t3q', w:2, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'q'},{d:2/3,g:'q'}]},
+  /* A broken triplet is one whose three partials are not all sounded: two of
+     them joined into one longer note, or the middle one silent. Nothing can be
+     beamed once the partials differ, so these carry a bracket like the quarter
+     triplet does, and their eighths are flagged. The bracket runs from the
+     first note to the last, which is why the silent partial is the middle one:
+     a rest on either end would leave the bracket short of the tuplet. */
+  {name:'Triplets', cells:[
+    {id:'t3e',   w:3, beats:1, beam:true, tn:3, ev:[{d:1/3,g:'e'},{d:1/3,g:'e'},{d:1/3,g:'e'}]},
+    {id:'t3qe',  w:1.5, beats:1, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:1/3,g:'e',flag:true}]},
+    {id:'t3eq',  w:1.5, beats:1, bracket:true, tn:3, ev:[{d:1/3,g:'e',flag:true},{d:2/3,g:'q'}]},
+    {id:'t3ere', w:1.5, beats:1, bracket:true, tn:3, ev:[{d:1/3,g:'e',flag:true},{d:1/3,g:'er',rest:true},{d:1/3,g:'e',flag:true}]},
     {id:'t6s', w:1.5, beats:1, beam:true, tn:3, ev:[
       {d:1/6,g:'s',bs:0},{d:1/6,g:'s',bs:0},{d:1/6,g:'s',bs:0},
       {d:1/6,g:'s',bs:1},{d:1/6,g:'s',bs:1},{d:1/6,g:'s',bs:1}]},
+    {id:'t3q',   w:2, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'q'},{d:2/3,g:'q'}]},
+    {id:'t3hq',  w:1, beats:2, bracket:true, tn:3, ev:[{d:4/3,g:'h'},{d:2/3,g:'q'}]},
+    {id:'t3qh',  w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:4/3,g:'h'}]},
+    {id:'t3qrq', w:1, beats:2, bracket:true, tn:3, ev:[{d:2/3,g:'q'},{d:2/3,g:'qr',rest:true},{d:2/3,g:'q'}]},
+  ]},
+  {name:'Quintuplets', cells:[
     {id:'t5s', w:2, beats:1, beam:true, tn:5, ev:[{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'},{d:.2,g:'s'}]},
     {id:'t5e', w:2, beats:2, beam:true, tn:5, ev:[{d:.4,g:'e'},{d:.4,g:'e'},{d:.4,g:'e'},{d:.4,g:'e'},{d:.4,g:'e'}]},
+  ]},
+  {name:'Septuplets', cells:[
     {id:'t7e', w:2, beats:2, beam:true, tn:7, ev:[{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'},{d:2/7,g:'e'}]},
   ]},
   {name:'Dotted Note Combinations', cells:[

@@ -53,6 +53,8 @@ The **Rhythm figures** panel lists every figure the generator can use, grouped b
 
 Guaranteed figures are how you drill one thing without giving up variety around it: guarantee the sixteenth triplet, leave a few plain figures selected, and every rhythm will contain that triplet and something different around it. Each guaranteed figure claims one random slot, in one measure picked at random, so on a two-measure rhythm it turns up once across the pair rather than twice. If several of them cannot all fit, or one is longer than the bar, whatever does not fit is quietly left out rather than breaking the rhythm.
 
+Triplets, quintuplets and septuplets have a section each. The triplet section also carries the broken triplets, where the three partials are not all sounded: two of them joined into one longer note, or the middle one silent. Both the eighth-note triplet and the quarter-note triplet have those variations.
+
 The **×** on a group clears it, or selects all of it when it is already empty. With nothing selected at all, bars fall back to plain quarter notes.
 
 A figure is only placed where its length divides the beat position, so two-beat figures start on odd-numbered beats and three-beat figures on beats 1 and 4. Figures longer than the bar (a whole note in 3/4, say) are simply never placed, and a beat that nothing fits gets a quarter note. Bars are regenerated until they hold at least two notes, so a selection of only long or silent figures can still yield a sparse bar.
