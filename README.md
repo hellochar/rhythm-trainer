@@ -53,7 +53,13 @@ The **Rhythm figures** panel lists every figure the generator can use, grouped b
 
 Guaranteed figures are how you drill one thing without giving up variety around it: guarantee the sixteenth triplet, leave a few plain figures selected, and every rhythm will contain that triplet and something different around it. Each guaranteed figure claims one random slot, in one measure picked at random, so on a two-measure rhythm it turns up once across the pair rather than twice. If several of them cannot all fit, or one is longer than the bar, whatever does not fit is quietly left out rather than breaking the rhythm.
 
-Triplets, quintuplets and septuplets have a section each. The triplet section also carries the broken triplets, where the three partials are not all sounded: two of them joined into one longer note, or the middle one silent. Both the eighth-note triplet and the quarter-note triplet have those variations.
+The sections run by note value — **Basic**, **Eighths**, **Sixteenths**, **Thirty-seconds** — and then by tuplet: **Triplets**, **Quintuplets**, **Septuplets**.
+
+The triplet section carries the broken triplets as well, where one of the three partials is silent. Every partial keeps the value it has in the whole triplet, an eighth in the eighth-note triplet and a quarter in the quarter-note triplet, so what you read is the triplet with a hole in it rather than a longer note you have to count out. Each of the two has all three: the first, the middle or the last partial silent.
+
+A sixteenth-note triplet is only half a beat, and a figure fills whole ones, so it comes paired with what shares its beat: a triplet then an eighth, an eighth then a triplet, and the same two with a rest in place of the eighth. The 3 sits over the three sixteenths alone. Six sixteenths in a beat are one sextuplet under a single unbroken beam, numbered 6, rather than two triplets of three.
+
+Thirty-seconds are written with three beams. A beat of them needs more room than a beat of quarters, and the staff is time-proportional, so a bar containing them is drawn a little smaller to make that room.
 
 The **×** on a group clears it, or selects all of it when it is already empty. With nothing selected at all, bars fall back to plain quarter notes.
 
