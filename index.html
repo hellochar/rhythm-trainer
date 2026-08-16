@@ -73,7 +73,60 @@
   .field input[type=number]{width:74px}
   .field input[type=checkbox]{accent-color:var(--teal);width:16px;height:16px}
   .field input[type=range]{accent-color:var(--teal);width:120px}
-  .field .vol{font-family:ui-monospace,Menlo,monospace;min-width:30px;text-align:right}
+  .vol{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--text-dim);min-width:30px;text-align:right}
+
+  /* ----- tempo dial + sound mixer ----- */
+  .deck{
+    width:100%;max-width:900px;margin-top:16px;
+    display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:center;
+  }
+  .dial{
+    --d:190px;position:relative;width:var(--d);height:var(--d);flex:none;
+    touch-action:none;user-select:none;cursor:ew-resize;
+  }
+  .dial:focus-visible{outline:2px solid var(--teal);outline-offset:4px;border-radius:50%}
+  .dial svg{display:block;width:100%;height:100%}
+  .dial .bpmnum{
+    position:absolute;left:0;right:0;top:17%;text-align:center;pointer-events:none;
+    font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1;
+  }
+  .dial .bpmlabel{
+    position:absolute;left:0;right:0;bottom:16%;text-align:center;pointer-events:none;
+    font-size:10.5px;letter-spacing:.2em;color:var(--text-dim);
+  }
+  .dial .dbtn{position:absolute;top:50%;transform:translate(-50%,-50%);padding:0}
+  .dial .go{
+    left:50%;width:66px;height:66px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 2px 8px #00000030, inset 0 0 0 1px #ffffff66;
+  }
+  .dial .go svg{width:26px;height:26px}
+  .dial .nudge{
+    width:34px;height:44px;background:none;color:#00000055;
+    font-size:22px;font-weight:400;line-height:1;
+  }
+  .dial .nudge:hover{color:var(--ink);filter:none}
+  .dial .dec{left:20%} .dial .inc{left:80%}
+  @media (max-width:400px){ .dial{--d:162px} .dial .go{width:56px;height:56px} .dial .bpmnum{font-size:22px} }
+
+  .mixer{flex:1 1 260px;min-width:250px;max-width:420px;display:flex;flex-direction:column;gap:10px}
+  .srow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+  .srow input[type=range]{accent-color:var(--teal);width:100%;min-width:0}
+  .sicon{
+    width:42px;height:42px;flex:none;padding:0;color:var(--ink);
+    background:#00000010;border:1px solid #00000033;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .sicon svg{width:24px;height:24px;display:block}
+  .sicon .slash{opacity:0;transition:opacity .1s ease}
+  .slabel{display:none;font-size:13px;color:var(--text-dim)}
+  .srow.muted .sicon{background:none;color:var(--text-dim)}
+  .srow.muted .sicon .slash{opacity:1}
+  .srow.muted input[type=range],.srow.muted .vol,.srow.muted .slabel{opacity:.4}
+  @media (min-width:620px){
+    .srow{grid-template-columns:auto 74px 1fr auto}
+    .slabel{display:block}
+  }
 
   .figs{
     display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
@@ -89,14 +142,42 @@
     background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:6px;
   }
   .figrow{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+  .fighint{display:block;margin-top:8px;font-size:12px;color:var(--text-dim)}
   .figopt{
-    display:flex;align-items:center;gap:7px;cursor:pointer;
+    position:relative;display:flex;align-items:center;gap:7px;cursor:pointer;
+    font:inherit;font-weight:400;color:var(--text);
     background:#00000014;border:1px solid #00000033;border-radius:9px;padding:5px 9px 5px 7px;
     transition:opacity .1s ease,border-color .1s ease;
   }
-  .figopt input{accent-color:var(--teal);width:16px;height:16px;flex:none}
+  .figopt:hover{filter:none}
   .figopt svg{display:block;height:40px;width:auto}
-  .figopt.off{opacity:.45;background:none;border-color:#0000001a}
+  .figopt .dot{
+    width:11px;height:11px;border-radius:50%;flex:none;
+    border:1.5px solid #00000055;background:none;
+  }
+  .figopt[data-s=off]{opacity:.45;background:none;border-color:#0000001a}
+  .figopt[data-s=on] .dot{background:var(--teal);border-color:var(--teal)}
+  /* guaranteed: brass dot, breathing glow, and a light chasing the border */
+  .figopt[data-s=must]{border-color:transparent;background:color-mix(in srgb,var(--brass) 14%,transparent);
+    animation:figglow 2.6s ease-in-out infinite}
+  .figopt[data-s=must] .dot{background:var(--brass);border-color:var(--brass-deep)}
+  .figopt[data-s=must]::before{
+    content:'';position:absolute;inset:-1px;border-radius:10px;padding:2px;pointer-events:none;
+    background:conic-gradient(from var(--spin,0deg),
+      transparent 0 6%, var(--brass) 20%, var(--brass-deep) 27%, transparent 44%,
+      transparent 56%, var(--brass) 70%, var(--brass-deep) 77%, transparent 94%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor;
+    mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+    mask-composite:exclude;
+    animation:figspin 2.6s linear infinite;
+  }
+  @property --spin{syntax:'<angle>';initial-value:0deg;inherits:false}
+  @keyframes figspin{to{--spin:360deg}}
+  @keyframes figglow{
+    0%,100%{box-shadow:0 0 2px 0 color-mix(in srgb,var(--brass) 18%,transparent)}
+    50%{box-shadow:0 0 12px 1px color-mix(in srgb,var(--brass) 62%,transparent)}
+  }
 
   .pad{
     width:100%;max-width:900px;margin-top:14px;
@@ -116,7 +197,7 @@
   #result b{color:var(--text)}
   .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px;color:var(--text-dim)}
   .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
-  @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;animation:none !important} }
 </style>
 </head>
 <body>
@@ -130,11 +211,51 @@
 
 <div class="chart"><div id="score"></div></div>
 
+<div class="deck">
+  <div class="dial" id="dial" role="slider" tabindex="0" aria-label="tempo in beats per minute"
+       aria-valuemin="40" aria-valuemax="200" aria-valuenow="90">
+    <div class="bpmnum" id="bpmNum">90</div>
+    <div class="bpmlabel">BPM</div>
+    <button type="button" class="dbtn nudge dec" id="bpmDown" aria-label="slower">‹</button>
+    <button type="button" class="dbtn nudge inc" id="bpmUp" aria-label="faster">›</button>
+    <button type="button" class="dbtn go" id="goBtn" aria-label="start"></button>
+  </div>
+  <div class="mixer">
+    <div class="srow" id="rowBell">
+      <button type="button" class="sicon" id="bellIcon" aria-pressed="true" aria-label="rhythm sound on or off">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M8.5 5h7l2.5 12h-12z"/>
+          <path d="M6 17q6 2.2 12 0"/>
+          <path d="M10.6 5V3.5a1.4 1.4 0 0 1 2.8 0V5"/>
+          <line class="slash" x1="3.5" y1="20.5" x2="20.5" y2="3.5"/>
+        </svg>
+      </button>
+      <span class="slabel">rhythm</span>
+      <input type="range" id="bellVol" min="0" max="100" step="5" value="100" aria-label="rhythm volume">
+      <span class="vol" id="bellVolText">100</span>
+      <input type="checkbox" id="bellOn" checked hidden>
+    </div>
+    <div class="srow" id="rowMet">
+      <button type="button" class="sicon" id="metIcon" aria-pressed="true" aria-label="metronome on or off">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M9 3h6l3.4 18h-12.8z"/>
+          <path d="M5.6 17h12.8"/>
+          <path d="M12.3 18.6 16 6"/>
+          <rect x="12.9" y="9.7" width="3.4" height="2.4" rx=".6"/>
+          <line class="slash" x1="3.5" y1="20.5" x2="20.5" y2="3.5"/>
+        </svg>
+      </button>
+      <span class="slabel">metronome</span>
+      <input type="range" id="metVol" min="0" max="100" step="5" value="30" aria-label="metronome volume">
+      <span class="vol" id="metVolText">30</span>
+      <input type="checkbox" id="metronome" checked hidden>
+    </div>
+  </div>
+</div>
+
 <div class="controls">
-  <button id="startBtn">Start ▶</button>
   <button id="retryBtn" class="secondary">Retry ↺</button>
-  <button id="stopBtn" class="secondary">Stop</button>
-  <label class="field">Tempo <input type="number" id="tempo" min="40" max="200" step="5" value="90"> bpm</label>
+  <input type="number" id="tempo" min="40" max="200" step="1" value="90" hidden>
   <label class="field">Length
     <select id="measures"><option value="1">1 measure</option><option value="2">2 measures</option></select>
   </label>
@@ -152,20 +273,15 @@
   <label class="field"><input type="checkbox" id="replay"> replay the same bar</label>
   <label class="field"><input type="checkbox" id="showLine"> moving line</label>
   <label class="field"><input type="checkbox" id="echoSound"> cowbell on my pass</label>
-  <label class="field"><input type="checkbox" id="metronome"> metronome</label>
   <!-- experimenting without tap scoring: uncommenting this brings back the tap
        pad, the legend, the results line and the calibration panel -->
   <!-- <label class="field"><input type="checkbox" id="scoring"> score my taps</label> -->
   <label class="field"><input type="checkbox" id="tapSound" checked> sound on my taps</label>
 </div>
 
-<div class="controls">
-  <label class="field">Cowbell volume <input type="range" id="bellVol" min="0" max="100" step="5" value="100"><span class="vol" id="bellVolText">100</span></label>
-  <label class="field">Metronome volume <input type="range" id="metVol" min="0" max="100" step="5" value="30"><span class="vol" id="metVolText">30</span></label>
-</div>
-
 <details class="panel" id="figPanel">
   <summary>Rhythm figures <span class="status" id="figCount"></span></summary>
+  <span class="fighint">Tap a figure once to include it, twice to guarantee it appears in every measure, a third time to drop it.</span>
   <div class="figs" id="figs"></div>
 </details>
 
@@ -245,30 +361,64 @@ const ALL_CELLS = GROUPS.flatMap(g=>g.cells);
 /* used to fill a beat when the current selection cannot fill one */
 const FILL = {id:'_fill', w:1, beats:1, ev:[{d:1,g:'q'}]};
 
+/* Each figure is off, on, or guaranteed ('must'); the guaranteed ones are also
+   part of the ordinary pool, they just get a reserved slot in every measure. */
+function figState(id){
+  const v=$('fig-'+id).value;
+  return v==='must' ? 'must' : (v==='on'||v==='true') ? 'on' : 'off';
+}
+function setFigState(id, s){ $('fig-'+id).value=s; }
 function selectedCells(){
-  const sel = ALL_CELLS.filter(c => $('fig-'+c.id).checked);
+  const sel = ALL_CELLS.filter(c => figState(c.id)!=='off');
   return sel.length ? sel : [FILL];
 }
+function mustCells(){ return ALL_CELLS.filter(c => figState(c.id)==='must'); }
 function pickWeighted(list){
   let total=list.reduce((s,c)=>s+c.w,0), r=Math.random()*total;
   for(const c of list){ r-=c.w; if(r<=0) return c; }
   return list[list.length-1];
 }
+/* One attempt at a bar: the guaranteed cells claim a random free slot each,
+   then everything in between is filled from the pool. A guaranteed cell that
+   cannot fit anywhere is simply left out of this attempt. */
+function layoutMeasure(bpb, cells, must){
+  const res=[];
+  const order=must.slice();
+  for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
+  order.forEach(m=>{
+    const spots=[];
+    for(let p=0; p+m.beats<=bpb; p+=m.beats){
+      if(!res.some(r => p < r.start+r.cell.beats && r.start < p+m.beats)) spots.push(p);
+    }
+    if(spots.length) res.push({cell:m, start:spots[Math.floor(Math.random()*spots.length)]});
+  });
+  res.sort((a,b)=>a.start-b.start);
+  const placed=[]; let pos=0;
+  while(pos<bpb){
+    const here=res.find(r=>r.start===pos);
+    if(here){ placed.push(here); pos+=here.cell.beats; continue; }
+    // never overrun the next reserved slot
+    const next=res.find(r=>r.start>pos);
+    const room=(next?next.start:bpb)-pos;
+    const cands = cells.filter(c => c.beats<=room && pos%c.beats===0);
+    const c = cands.length ? pickWeighted(cands) : FILL;
+    placed.push({cell:c, start:pos});
+    pos += c.beats;
+  }
+  return placed;
+}
 /* a cell may only start where its own length divides the beat position, so
    2-beat cells land on odd-numbered beats and odd meters group as 2+2+1 */
-function genMeasure(bpb, cells){
-  let best=null, bestOn=-1;
+function genMeasure(bpb, cells, must=[]){
+  let best=null, bestScore=-1;
   for(let attempt=0; attempt<30; attempt++){
-    const placed=[]; let pos=0;
-    while(pos<bpb){
-      const cands = cells.filter(c => c.beats<=(bpb-pos) && pos%c.beats===0);
-      const c = cands.length ? pickWeighted(cands) : FILL;
-      placed.push({cell:c, start:pos});
-      pos += c.beats;
-    }
+    const placed=layoutMeasure(bpb, cells, must);
     const onsets = placed.flatMap(p=>p.cell.ev).filter(e=>!e.rest).length;
-    if(onsets>=2) return placed;
-    if(onsets>bestOn){ bestOn=onsets; best=placed; }
+    const got = must.filter(m=>placed.some(p=>p.cell===m)).length;
+    if(onsets>=2 && got===must.length) return placed;
+    // guaranteed coverage first, then a bar that is not nearly empty
+    const score = got*1000 + (onsets>=2?500:0) + onsets;
+    if(score>bestScore){ bestScore=score; best=placed; }
   }
   return best;
 }
@@ -283,10 +433,10 @@ function cellEvents(cell, t0, key){
   });
   return out;
 }
-function genRhythm(measures, bpb, cells){
+function genRhythm(measures, bpb, cells, must=[]){
   const events=[];
   for(let mi=0;mi<measures;mi++){
-    genMeasure(bpb, cells).forEach(p=>{
+    genMeasure(bpb, cells, must).forEach(p=>{
       events.push(...cellEvents(p.cell, mi*bpb+p.start, mi+'-'+p.start));
     });
   }
@@ -407,29 +557,47 @@ function cellPreview(cell){
     `<line x1="2" y1="${y}" x2="${W-2}" y2="${y}" stroke="var(--ink)" stroke-width="1.2" opacity=".55"/>`+
     drawEvents(evs, xf, y)+`</svg>`;
 }
+/* off → on → guaranteed → off */
+const NEXT_STATE={off:'on', on:'must', must:'off'};
+const STATE_TITLE={off:'not used — tap to include it',
+                   on:'included — tap to guarantee it in every measure',
+                   must:'guaranteed in every measure — tap to drop it'};
 function buildFigs(){
   $('figs').innerHTML = GROUPS.map((grp,gi)=>
     `<fieldset class="figgroup"><legend>${grp.name}`+
     `<button type="button" class="figclear" data-g="${gi}" title="clear this group, or select all of it">×</button>`+
     `</legend><div class="figrow">`+
-    grp.cells.map(c=>`<label class="figopt" id="opt-${c.id}">`+
-      `<input type="checkbox" id="fig-${c.id}"${c.on?' checked':''}>${cellPreview(c)}</label>`).join('')+
+    grp.cells.map(c=>`<button type="button" class="figopt" id="opt-${c.id}">`+
+      `<input type="hidden" id="fig-${c.id}" value="${c.on?'on':'off'}">`+
+      `<span class="dot"></span>${cellPreview(c)}</button>`).join('')+
     `</div></fieldset>`).join('');
   $('figs').querySelectorAll('.figclear').forEach(b=>b.addEventListener('click',()=>{
-    const cells=GROUPS[+b.dataset.g].cells, any=cells.some(c=>$('fig-'+c.id).checked);
-    cells.forEach(c=>{ $('fig-'+c.id).checked = !any; });
-    syncFigs(); saveSettings();
+    const cells=GROUPS[+b.dataset.g].cells, any=cells.some(c=>figState(c.id)!=='off');
+    cells.forEach(c=>setFigState(c.id, any?'off':'on'));
+    figsChanged();
   }));
-  $('figs').addEventListener('change', syncFigs);
-}
-function syncFigs(){
-  let n=0;
-  ALL_CELLS.forEach(c=>{
-    const on=$('fig-'+c.id).checked; if(on) n++;
-    $('opt-'+c.id).classList.toggle('off', !on);
+  $('figs').addEventListener('click',e=>{
+    const b=e.target.closest('.figopt'); if(!b) return;
+    const id=b.id.slice(4);
+    setFigState(id, NEXT_STATE[figState(id)]);
+    figsChanged();
   });
-  $('figCount').textContent = n ? `— ${n} of ${ALL_CELLS.length} selected`
-                                : '— none selected, using quarter notes';
+}
+function figsChanged(){ syncFigs(); saveSettings(); previewIdle(); }
+function syncFigs(){
+  let n=0, m=0;
+  ALL_CELLS.forEach(c=>{
+    const s=figState(c.id);
+    setFigState(c.id, s);                       // rewrite legacy true/false values
+    if(s!=='off') n++;
+    if(s==='must') m++;
+    const b=$('opt-'+c.id);
+    b.dataset.s=s; b.title=STATE_TITLE[s];
+    b.setAttribute('aria-label', STATE_TITLE[s]);
+  });
+  $('figCount').textContent = (n ? `— ${n} of ${ALL_CELLS.length} selected`
+                                 : '— none selected, using quarter notes')
+                            + (m ? `, ${m} guaranteed` : '');
 }
 
 /* ---------- audio ---------- */
@@ -464,14 +632,19 @@ function click(at, hi=false, vol=0.5, dest=null){
   g.gain.exponentialRampToValueAtTime(0.001, at+0.07);
   o.connect(g); g.connect(dest||master); o.start(at); o.stop(at+0.09);
 }
-/* The cowbell and the metronome each ride their own bus, so the checkbox and
-   the volume sliders reach sounds that were scheduled a bar ago. */
+/* The cowbell and the metronome each ride their own bus, so the mute buttons
+   and the volume sliders reach sounds that were scheduled a bar ago. */
 function met(at, hi){ audio(); click(at, hi, 1, metBus); }
 function syncVol(){
+  const bOn=$('bellOn').checked, mOn=$('metronome').checked;
   $('bellVolText').textContent=$('bellVol').value;
   $('metVolText').textContent=$('metVol').value;
-  if(ctx&&bellBus) bellBus.gain.setTargetAtTime(+$('bellVol').value/100, ctx.currentTime, 0.01);
-  if(ctx&&metBus) metBus.gain.setTargetAtTime($('metronome').checked?+$('metVol').value/100:0, ctx.currentTime, 0.01);
+  $('rowBell').classList.toggle('muted', !bOn);
+  $('rowMet').classList.toggle('muted', !mOn);
+  $('bellIcon').setAttribute('aria-pressed', bOn);
+  $('metIcon').setAttribute('aria-pressed', mOn);
+  if(ctx&&bellBus) bellBus.gain.setTargetAtTime(bOn?+$('bellVol').value/100:0, ctx.currentTime, 0.01);
+  if(ctx&&metBus) metBus.gain.setTargetAtTime(mOn?+$('metVol').value/100:0, ctx.currentTime, 0.01);
 }
 function killAudio(){
   if(master){ try{master.disconnect();}catch(e){} }
@@ -487,8 +660,35 @@ function setPhase(p){
   state.phase=p;
   $('lamp').dataset.p=p; $('lampText').textContent=PHASE_TEXT[p];
   $('pad').classList.toggle('hot', p==='user' && scoringOn());
+  updateGo();
 }
-function makeRhythm(){ return genRhythm(+$('measures').value, +$('timesig').value, selectedCells()); }
+function makeRhythm(){
+  return genRhythm(+$('measures').value, +$('timesig').value, selectedCells(), mustCells());
+}
+
+/* ---------- screen wake lock ---------- */
+/* Phones dim and sleep while you play with your hands off the screen, so hold
+   a wake lock for as long as a run is going. It is dropped when the tab is
+   hidden, hence the re-request on visibilitychange. */
+let wakeLock=null;
+function keepAwake(on){
+  try{
+    if(!navigator.wakeLock) return;
+    if(on){
+      if(wakeLock) return;
+      navigator.wakeLock.request('screen').then(w=>{
+        if(!isRunning()){ w.release().catch(()=>{}); return; }
+        wakeLock=w;
+        w.addEventListener('release',()=>{ if(wakeLock===w) wakeLock=null; });
+      }).catch(()=>{});
+    } else if(wakeLock){
+      const w=wakeLock; wakeLock=null; w.release().catch(()=>{});
+    }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && isRunning()) keepAwake(true);
+});
 /* what the next cycle plays: the same bar again while replay is on */
 function nextRhythm(){ return $('replay').checked ? state.rhythm : makeRhythm(); }
 
@@ -523,6 +723,7 @@ function startRun(fresh, single){
   state.pending=null;
   prepareExpected();
   setPhase('count');
+  keepAwake(true);
   cancelAnimationFrame(state.raf);
   loop();
 }
@@ -556,6 +757,7 @@ function loop(){
     } else {
       if(ph) ph.setAttribute('opacity','0');
       setPhase('results');
+      keepAwake(false);
       return;
     }
   }
@@ -572,10 +774,12 @@ function movePlayhead(ph, beatPos, color){
 function stopAll(reset=true){
   cancelAnimationFrame(state.raf);
   killAudio(); state.cycle=null; state.pending=null;
+  keepAwake(false);
   if(reset){
     setPhase('ready');
     const ph=$('score').querySelector('#playhead'); if(ph) ph.setAttribute('opacity','0');
   }
+  updateGo();
 }
 
 /* ---------- realtime marking & scoring ---------- */
@@ -649,7 +853,8 @@ function flashPad(){
 $('pad').addEventListener('pointerdown',e=>{e.preventDefault();registerTap();});
 window.addEventListener('keydown',e=>{
   if(e.code==='Space'||e.code==='Enter'){
-    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON') return;
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON'
+       ||e.target.id==='dial') return;
     e.preventDefault(); registerTap();
   }
 });
@@ -732,12 +937,130 @@ function loadSettings(){
   });
 }
 
+/* ---------- tempo dial ---------- */
+/* A jog wheel: turning it anywhere on the face moves the tempo by how far you
+   turned, so it works the same wherever you grab it. The hidden #tempo input
+   stays the one source of truth, which keeps saving and loading unchanged. */
+const DIAL_R=72, DIAL_C=2*Math.PI*DIAL_R, DIAL_SWEEP=270/360, BPM_PER_DEG=0.5;
+const ICON_PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.6 20 12 7.5 19.4z"/></svg>';
+const ICON_STOP='<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.2"/></svg>';
+function buildDial(){
+  let knurls='';
+  const N=44;
+  for(let i=0;i<N;i++){
+    knurls+=`<rect x="-2.4" y="-95" width="4.8" height="13" rx="2.4" fill="#00000024" transform="rotate(${(i*360/N).toFixed(2)})"/>`;
+  }
+  $('dial').insertAdjacentHTML('afterbegin',
+    `<svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">`+
+    `<circle r="97" fill="var(--stage-2)" stroke="#00000022" stroke-width="1"/>`+
+    `<g>${knurls}</g>`+
+    `<circle r="80" fill="var(--paper)" stroke="#0000001f" stroke-width="1"/>`+
+    `<circle r="${DIAL_R}" fill="none" stroke="#00000012" stroke-width="5"/>`+
+    `<circle id="dialArc" r="${DIAL_R}" fill="none" stroke="var(--teal)" stroke-width="5"`+
+    ` stroke-linecap="round" transform="rotate(135)" stroke-dasharray="0 ${Math.ceil(DIAL_C)}"/>`+
+    `</svg>`);
+}
+function getTempo(){ return +$('tempo').value||90; }
+function setTempo(v){
+  const lo=+$('tempo').min, hi=+$('tempo').max;
+  v=Math.max(lo, Math.min(hi, Math.round(v)));
+  if(v===getTempo()) return;
+  $('tempo').value=v;
+  updateDial();
+}
+function updateDial(){
+  const lo=+$('tempo').min, hi=+$('tempo').max, v=getTempo();
+  $('bpmNum').textContent=v;
+  $('dial').setAttribute('aria-valuenow', v);
+  $('dial').setAttribute('aria-valuetext', v+' bpm');
+  const arc=$('dialArc');
+  if(arc) arc.setAttribute('stroke-dasharray',
+    `${(DIAL_C*DIAL_SWEEP*(v-lo)/(hi-lo)).toFixed(1)} ${Math.ceil(DIAL_C)}`);
+}
+let goShows=null;
+function isRunning(){ return !!state.cycle && state.phase!=='ready' && state.phase!=='results'; }
+function updateGo(){
+  const on=isRunning();
+  if(on===goShows) return;
+  goShows=on;
+  $('goBtn').innerHTML = on?ICON_STOP:ICON_PLAY;
+  $('goBtn').setAttribute('aria-label', on?'stop':'start');
+}
+let turn=null;
+function dialAngle(e){
+  const r=$('dial').getBoundingClientRect();
+  return Math.atan2(e.clientY-(r.top+r.height/2), e.clientX-(r.left+r.width/2))*180/Math.PI;
+}
+$('dial').addEventListener('pointerdown',e=>{
+  if(e.target.closest('#goBtn')) return;
+  e.preventDefault();
+  // a gesture that starts on a ‹ › has to travel a little before it counts as
+  // a turn, so holding one to repeat is not stolen by a shaky finger
+  turn={a:dialAngle(e), acc:0, travel:0, held:!!e.target.closest('.nudge')};
+  try{ $('dial').setPointerCapture(e.pointerId); }catch(err){}
+});
+$('dial').addEventListener('pointermove',e=>{
+  if(!turn) return;
+  const a=dialAngle(e);
+  let d=a-turn.a; if(d>180) d-=360; if(d<-180) d+=360;
+  turn.a=a; turn.travel+=Math.abs(d);
+  if(turn.held){
+    if(turn.travel<10) return;
+    turn.held=false; endNudge();          // it is a turn after all
+  }
+  turn.acc+=d*BPM_PER_DEG;
+  const step=Math.trunc(turn.acc);
+  if(step){ turn.acc-=step; setTempo(getTempo()+step); }
+});
+/* the pointer is captured by the dial, so the ‹ › buttons never see their own
+   pointerup — the repeat has to be stopped from here */
+['pointerup','pointercancel'].forEach(t=>$('dial').addEventListener(t,()=>{
+  endNudge();
+  if(!turn) return; turn=null; saveSettings();
+}));
+$('dial').addEventListener('keydown',e=>{
+  const k=e.key;
+  const d = k==='ArrowRight'||k==='ArrowUp' ? 1 : k==='ArrowLeft'||k==='ArrowDown' ? -1
+          : k==='PageUp' ? 5 : k==='PageDown' ? -5 : 0;
+  if(!d) return;
+  e.preventDefault(); setTempo(getTempo()+d); saveSettings();
+});
+/* the ‹ › nudges step by one and repeat while held */
+let nudgeStop=null;
+function endNudge(){ if(nudgeStop){ const f=nudgeStop; nudgeStop=null; f(); saveSettings(); } }
+function nudge(id, dv){
+  const b=$(id);
+  const step=()=>setTempo(getTempo()+dv);
+  b.addEventListener('pointerdown',()=>{
+    endNudge(); step();
+    let rep=0;
+    const hold=setTimeout(()=>{ rep=setInterval(step, 70); }, 400);
+    nudgeStop=()=>{ clearTimeout(hold); clearInterval(rep); };
+  });
+  b.addEventListener('click',e=>{ if(e.detail===0){ step(); saveSettings(); } });   // keyboard
+}
+nudge('bpmUp', 1);
+nudge('bpmDown', -1);
+
 /* ---------- buttons ---------- */
-$('startBtn').addEventListener('click',()=>startRun(true, !$('continuous').checked));
+/* The dial's centre is the start/stop button, and it is the user gesture that
+   unlocks audio on mobile. */
+$('goBtn').addEventListener('click',()=>{
+  if(isRunning()) stopAll();
+  else startRun(true, !$('continuous').checked);
+});
 $('retryBtn').addEventListener('click',retryRun);
-$('stopBtn').addEventListener('click',()=>stopAll());
-$('metronome').addEventListener('change',syncVol);
-['bellVol','metVol'].forEach(id=>$(id).addEventListener('input',syncVol));
+/* tapping a sound's icon mutes it outright; moving its slider brings it back */
+[['bellIcon','bellOn','bellVol'],['metIcon','metronome','metVol']].forEach(([icon,box,vol])=>{
+  $(icon).addEventListener('click',()=>{
+    $(box).checked=!$(box).checked;
+    syncVol(); saveSettings();
+  });
+  $(vol).addEventListener('input',()=>{
+    if(+$(vol).value>0 && !$(box).checked){ $(box).checked=true; saveSettings(); }
+    syncVol();
+  });
+});
 /* while nothing is running, the staff previews whatever the settings now produce */
 function previewIdle(){
   if(state.cycle) return;
@@ -749,9 +1072,12 @@ document.addEventListener('change',()=>{ saveSettings(); previewIdle(); });
 document.querySelectorAll('details[id]').forEach(d=>d.addEventListener('toggle',saveSettings));
 
 buildFigs();
+buildDial();
 loadSettings();
 syncFigs();
 syncVol();
+updateDial();
+updateGo();
 updateScoringUI();
 state.rhythm=makeRhythm();
 renderRhythm(state.rhythm);
