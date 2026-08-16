@@ -1,6 +1,6 @@
 # Rhythm Trainer
 
-Rhythm sight-reading trainer that runs in the browser. It shows a randomly generated one or two measure rhythm in music notation, plays it once on a synthesized cowbell, and then the same bar comes around again for you to play it back. You can play it back in your head, on a drum practice pad, or by tapping into the app with scoring turned on. In continuous mode, a new rhythm follows on the very next beat and the pulse never stops.
+Rhythm sight-reading trainer that runs in the browser. It shows a randomly generated one or two measure rhythm in music notation, plays it once on a synthesized cowbell, and then the same bar comes around again for you to play it back. You can play it back in your head, on a drum practice pad, or by tapping into the app with scoring turned on. A new rhythm follows on the very next beat and the pulse never stops until you press stop.
 
 The whole app is one file, `index.html`, with no dependencies and no build step.
 
@@ -13,7 +13,7 @@ Open `index.html` in a browser, or visit the GitHub Pages URL for this repositor
 1. A count-in bar plays, one click per beat of the current meter, the beat number flashing above the staff (first cycle only).
 2. The rhythm plays on cowbell. With **moving line** on, a gold playhead sweeps the notation.
 3. The same bar repeats in silence, the playhead now teal. This is your pass.
-4. In continuous mode, the next rhythm appears and begins on the next beat.
+4. The next rhythm appears and begins on the next beat, and round it goes again.
 
 The word above the staff tells you which pass you are in. At rest it says nothing at all.
 
@@ -45,11 +45,10 @@ A two-measure rhythm sits on one staff on a wide window and stacks onto two rows
 - **tap tempo** sets the tempo from your own tapping. Tap it a few times in time and the dial follows the spacing of the last few taps; leave off for a couple of seconds and the next tap starts a new measurement. Every tap clicks back at you, whether or not the metronome is on. It sits under the dial on a wide window, and on a phone it moves out to the dial's bottom-right corner at the edge of the page, sized for a thumb.
 - **Length** chooses one or two measures per rhythm.
 - **Time** sets the time signature: 2/4, 3/4, 4/4, 5/4, 6/4, or 7/4. The quarter note is the beat in all of them, so the tempo means the same thing in every meter. The staff shows the signature, the count-in runs one bar of it, and the metronome accents beat 1. Changing it mid-run takes effect on the next rhythm.
-- **continuous** keeps generating new rhythms until you press Stop. Unchecked, one rhythm plays once and stops at results.
 - **The loop button** in the top-right corner of the staff repeats the current bar instead of moving on to a new one. Retry turns it on for you.
 - **moving line** shows the playhead sweeping the notation. It runs from the opening barline to the closing one at a steady rate and picks up on the next row when the staff is stacked, so it only ever jumps where the music itself goes back to the top. It is off by default, so nothing moves unless you ask for it; it can be toggled during a run.
 - **The two sound rows** — a cowbell for the rhythm and a metronome for the click — each have an icon and a volume slider. Tapping an icon mutes that sound outright and the row dims; moving its slider brings it back. Both are live: they reach sounds that were already scheduled, so a change is audible on the next note. Both scales mean the same thing, so 100 on one is as loud as 100 on the other. The metronome is on by default at 30, so it sits under the cowbell. On a wide enough window the rows are labelled `rhythm` and `metronome`.
-- **cowbell on my pass** plays the rhythm again, quieter, during your pass so you can hear your offset against it.
+- **cowbell on my pass** plays the rhythm again, quieter, during your pass so you can hear your offset against it. Like the volumes and the mutes, it takes effect the moment you tick it, on the pass already under way.
 - **score my taps** turns on tap tracking, and reveals the tap pad, the legend, the results line and the calibration panel. It is currently commented out in `index.html` while the app is being tried without it; uncommenting that one line brings all of it back.
 - **sound on my taps** plays a soft click on each tap. It only ever applies to a scored tap, so it appears with the rest of the scoring controls and is hidden while tap scoring is parked.
 
@@ -74,5 +73,5 @@ Keyboards, touchscreens, and audio output all add latency, so raw tap timestamps
 - The cowbell is two detuned square oscillators through a bandpass filter, in the style of the 808 cowbell.
 - The cowbell and the metronome each run through their own gain node, which is why the volume sliders and the mute buttons affect sounds that were scheduled a bar in advance. Sounds are written at full scale and a single output gain provides the headroom, so equal slider positions really are equal loudness.
 - The notation is hand-drawn SVG rather than a music font, so rests and flags look stylized.
-- In continuous mode, the next rhythm's audio is scheduled while you play the current one, which is how the transition lands with no gap.
+- The next rhythm's audio is scheduled while you play the current one, which is how the transition lands with no gap. Because of that head start, anything that changes what the next bar should be — the loop button, the meter, the length, the figures — lays that bar down again rather than waiting for it to come round.
 - The screen wake lock uses the Screen Wake Lock API where it exists, and is simply skipped where it does not. It is taken when a run starts, dropped when the run stops or ends, and re-taken when you come back to the tab.

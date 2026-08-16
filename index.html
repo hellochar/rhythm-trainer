@@ -305,7 +305,6 @@
       <option value="7">7/4</option>
     </select>
   </label>
-  <label class="field"><input type="checkbox" id="continuous" checked> continuous</label>
   <input type="checkbox" id="replay" hidden>
   <label class="field"><input type="checkbox" id="showLine"> moving line</label>
   <label class="field"><input type="checkbox" id="echoSound"> cowbell on my pass</label>
@@ -669,7 +668,7 @@ function buildFigs(){
     figsChanged();
   });
 }
-function figsChanged(){ syncFigs(); saveSettings(); previewIdle(); }
+function figsChanged(){ syncFigs(); saveSettings(); previewIdle(); bump(true); }
 function syncFigs(){
   let n=0, m=0;
   ALL_CELLS.forEach(c=>{
@@ -687,7 +686,7 @@ function syncFigs(){
 }
 
 /* ---------- audio ---------- */
-let ctx=null, master=null, metBus=null, bellBus=null;
+let ctx=null, master=null, metBus=null, bellBus=null, echoBus=null;
 /* Output headroom. Sounds are written at full scale so that equal slider
    positions mean equal loudness; this is the one place level is scaled. */
 const HEADROOM=0.7;
@@ -697,10 +696,12 @@ function audio(){
   let made=false;
   if(!bellBus){ bellBus=ctx.createGain(); bellBus.connect(master); made=true; }
   if(!metBus){ metBus=ctx.createGain(); metBus.connect(master); made=true; }
+  // the echo hangs off the bell bus, so it follows the rhythm volume and mute
+  if(!echoBus){ echoBus=ctx.createGain(); echoBus.connect(bellBus); made=true; }
   if(made) syncVol();
   return ctx;
 }
-function cowbell(at, vol=1){
+function cowbell(at, vol=1, echo=false){
   const c=audio(), g=c.createGain(), bp=c.createBiquadFilter();
   bp.type='bandpass'; bp.frequency.value=820; bp.Q.value=1.1;
   g.gain.setValueAtTime(vol, at);
@@ -709,7 +710,7 @@ function cowbell(at, vol=1){
     const o=c.createOscillator(); o.type='square'; o.frequency.value=f;
     o.connect(bp); o.start(at); o.stop(at+0.35);
   });
-  bp.connect(g); g.connect(bellBus);
+  bp.connect(g); g.connect(echo?echoBus:bellBus);
 }
 function click(at, hi=false, vol=0.5, dest=null){
   const c=audio(), o=c.createOscillator(), g=c.createGain();
@@ -723,6 +724,7 @@ function click(at, hi=false, vol=0.5, dest=null){
 function met(at, hi){ audio(); click(at, hi, 1, metBus); }
 function syncVol(){
   const bOn=$('bellOn').checked, mOn=$('metronome').checked;
+  if(ctx&&echoBus) echoBus.gain.setTargetAtTime($('echoSound').checked?1:0, ctx.currentTime, 0.01);
   $('bellVolText').textContent=$('bellVol').value;
   $('metVolText').textContent=$('metVol').value;
   $('rowBell').classList.toggle('muted', !bOn);
@@ -734,7 +736,7 @@ function syncVol(){
 }
 function killAudio(){
   if(master){ try{master.disconnect();}catch(e){} }
-  master=null; metBus=null; bellBus=null;
+  master=null; metBus=null; bellBus=null; echoBus=null;
 }
 /* Retiming has to drop everything already scheduled and schedule it again, so
    the old graph is ramped down over 20 ms and cut loose rather than yanked,
@@ -748,12 +750,12 @@ function fadeAudio(){
     m.gain.linearRampToValueAtTime(0, t+0.02);
   }catch(e){}
   setTimeout(()=>{ try{m.disconnect();}catch(e){} }, 400);
-  master=null; metBus=null; bellBus=null;
+  master=null; metBus=null; bellBus=null; echoBus=null;
 }
 
 /* ---------- state / flow ---------- */
 const $=id=>document.getElementById(id);
-const state={phase:'ready', rhythm:null, prev:null, cycle:null, pending:null, single:false,
+const state={phase:'ready', rhythm:null, prev:null, cycle:null, pending:null,
              beat:0.6, expected:[], win:0.12, extras:0, cal:null, raf:0, count:0};
 /* the readout above the staff: nothing at rest, the beat number during the
    count-in (driven from the loop), a word for the passes */
@@ -813,7 +815,8 @@ function scheduleCycle(r, start, beat, from=-Infinity){
   const total=r.measures*r.bpb;
   r.onsets.forEach(b=>{ const t=start+b*beat; if(t>from) cowbell(t); });
   const user=start+total*beat, end=user+total*beat;
-  if($('echoSound').checked) r.onsets.forEach(b=>{ const t=user+b*beat; if(t>from) cowbell(t, 0.45); });
+  // always scheduled, gated by echoBus, so the checkbox reaches a bar already laid down
+  r.onsets.forEach(b=>{ const t=user+b*beat; if(t>from) cowbell(t, 0.45, true); });
   for(let i=0;i<total*2;i++){ const t=start+i*beat; if(t>from) met(t, i%r.bpb===0); }
   return {rhythm:r, listen:start, user, end};
 }
@@ -835,16 +838,15 @@ function retimeExpected(){
   for(let i=1;i<ex.length;i++) mg=Math.min(mg, ex[i].t-ex[i-1].t);
   state.win=Math.max(0.08, Math.min(0.17, mg*0.45));
 }
-/* A tempo change mid-run has to move sound that is already scheduled, so the
-   whole schedule is rebuilt from where the music has got to: the cycle is
-   re-anchored so the current beat position is unchanged, and only what is
-   still in the future is scheduled again. */
-function retime(){
+/* A change mid-run has to reach sound that is already scheduled, so the whole
+   schedule is rebuilt from where the music has got to: the cycle is re-anchored
+   so the current beat position is unchanged under the new beat, and only what
+   is still in the future is laid down again. `refresh` also throws away the
+   bar waiting in the wings, for a change that alters what can be generated. */
+function reschedule(refresh){
   const cy=state.cycle;
   if(!cy || !ctx) return;
-  const b1=state.beat, b2=60/getTempo();
-  if(Math.abs(b2-b1)<1e-6) return;
-  const now=ctx.currentTime;
+  const now=ctx.currentTime, b1=state.beat, b2=60/getTempo();
   const pos=(now-cy.listen)/b1;              // beats from this cycle's downbeat
   fadeAudio(); audio();
   state.beat=b2;
@@ -852,16 +854,34 @@ function retime(){
   if(pos<0) scheduleCountIn(listen, bpb, b2, from);
   state.cycle=scheduleCycle(cy.rhythm, listen, b2, from);
   retimeExpected();
-  if(state.pending)
-    state.pending.cycle=scheduleCycle(state.pending.rhythm, state.cycle.end, b2, from);
+  fixPending(from, b2, refresh);
 }
-function startRun(fresh, single){
+/* The next bar is scheduled a full bar early, so it has to be laid down again
+   whenever what it should be has changed — the loop button flipping, or a
+   setting that changes what the generator can produce. */
+function fixPending(from, beat, refresh){
+  const p=state.pending; if(!p) return;
+  const same=$('replay').checked;
+  const nr = same ? state.rhythm
+           : (refresh || p.rhythm===state.rhythm) ? makeRhythm()
+           : p.rhythm;
+  state.pending={rhythm:nr, cycle:scheduleCycle(nr, state.cycle.end, beat, from)};
+}
+/* Rebuilding the graph is not free, and a dial turn fires on every step, so
+   everything that wants a rebuild goes through one settling timer. */
+let bumpT=0, bumpRefresh=false;
+function bump(refresh){
+  if(!state.cycle) return;
+  bumpRefresh = bumpRefresh || !!refresh;
+  clearTimeout(bumpT);
+  bumpT=setTimeout(()=>{ const r=bumpRefresh; bumpRefresh=false; reschedule(r); }, 140);
+}
+function startRun(fresh){
   stopAll(false);
   if(fresh || !state.rhythm) state.rhythm=makeRhythm();
   renderRhythm(state.rhythm);
   const c=audio(); c.resume();
   state.beat=60/getTempo();
-  state.single=single;
   const t0=c.currentTime+0.18, bpb=state.rhythm.bpb;
   scheduleCountIn(t0+bpb*state.beat, bpb, state.beat);
   state.cycle=scheduleCycle(state.rhythm, t0+bpb*state.beat, state.beat);
@@ -887,7 +907,7 @@ function loop(){
     setIf('user');
     movePlayhead(ph,(now-cy.user)/state.beat,'var(--teal)');
     if(scoringOn()) markMisses(now);
-    if(!state.single && !state.pending){
+    if(!state.pending){
       const nr=nextRhythm();
       state.pending={rhythm:nr, cycle:scheduleCycle(nr, cy.end, state.beat)};
     }
@@ -921,7 +941,7 @@ function movePlayhead(ph, beatPos, color){
 }
 function stopAll(reset=true){
   cancelAnimationFrame(state.raf);
-  clearTimeout(retimeT);
+  clearTimeout(bumpT); bumpRefresh=false;
   killAudio(); state.cycle=null; state.pending=null;
   keepAwake(false);
   if(reset){
@@ -1054,7 +1074,7 @@ function retryRun(){
   const r=retryTarget();
   $('replay').checked=true; syncLoop(); saveSettings();
   state.rhythm=r; state.prev=null;
-  startRun(false, false);
+  startRun(false);
 }
 
 /* ---------- settings persistence ---------- */
@@ -1125,15 +1145,13 @@ function updateDial(){
   if(arc) arc.setAttribute('stroke-dasharray',
     `${(DIAL_C*DIAL_SWEEP*(v-lo)/(hi-lo)).toFixed(1)} ${Math.ceil(DIAL_C)}`);
 }
-/* Anything already playing follows the new tempo. Rebuilding the schedule is
-   not free, so a turn of the dial coalesces into one retime once it settles. */
-let retimeT=0;
+/* anything already playing follows the new tempo */
 function tempoChanged(){
   const raw=$('tempo').value.trim(), v=+raw;
   // half-typed values are left alone until the field is committed
   if(raw==='' || !isFinite(v) || v<+$('tempo').min || v>+$('tempo').max) return;
   updateDial();
-  if(state.cycle){ clearTimeout(retimeT); retimeT=setTimeout(retime, 140); }
+  bump(false);
 }
 /* typing is only offered where there is a keyboard; on a touch screen the
    reading stays out of the way of the turn */
@@ -1234,7 +1252,7 @@ nudge('bpmDown', -1);
    is on, which is the one setting that says keep the bar you have. */
 $('goBtn').addEventListener('click',()=>{
   if(isRunning()) stopAll();
-  else startRun(!$('replay').checked, !$('continuous').checked);
+  else startRun(!$('replay').checked);
 });
 $('retryBtn').addEventListener('click',retryRun);
 /* replay lives on the loop button over the staff; the checkbox behind it is
@@ -1243,6 +1261,7 @@ function syncLoop(){ $('loopBtn').setAttribute('aria-pressed', $('replay').check
 $('loopBtn').addEventListener('click',()=>{
   $('replay').checked=!$('replay').checked;
   syncLoop(); saveSettings();
+  bump(false);                     // the bar in the wings changes with it
 });
 /* tapping a sound's icon mutes it outright; moving its slider brings it back */
 [['bellIcon','bellOn','bellVol'],['metIcon','metronome','metVol']].forEach(([icon,box,vol])=>{
@@ -1267,8 +1286,12 @@ function previewIdle(){
 }
 document.addEventListener('change',e=>{
   saveSettings();
-  if(e.target && GEN_IDS.includes(e.target.id)) previewIdle();
+  if(!e.target) return;
+  if(GEN_IDS.includes(e.target.id)){ previewIdle(); bump(true); }
 });
+/* the echo is gated by a gain node rather than read at schedule time, so the
+   checkbox reaches the pass that is already playing */
+$('echoSound').addEventListener('change', syncVol);
 document.querySelectorAll('details[id]').forEach(d=>d.addEventListener('toggle',saveSettings));
 /* the staff stacks its measures when the window is too narrow for one row */
 let resizeT=0;
