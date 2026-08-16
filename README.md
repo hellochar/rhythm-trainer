@@ -6,7 +6,7 @@ The whole app is one file, `index.html`, with no dependencies and no build step.
 
 ## Running it
 
-Open `index.html` in a browser, or visit the GitHub Pages URL for this repository. Press **Start ▶** to begin. Browsers require a tap or click before they allow audio, and the Start button satisfies that.
+Open `index.html` in a browser, or visit the GitHub Pages URL for this repository. Press the **▶** in the middle of the tempo dial to begin, and the same button stops it again. Browsers require a tap or click before they allow audio, and that button satisfies that. While a run is going the app holds a screen wake lock where the browser supports one, so a phone left alone on a music stand does not dim and sleep between bars.
 
 ## How a cycle works
 
@@ -21,7 +21,15 @@ Open `index.html` in a browser, or visit the GitHub Pages URL for this repositor
 
 ## Rhythm figures
 
-The **Rhythm figures** panel lists every figure the generator can use, grouped by kind, each with its notation and a checkbox. Only checked figures are used, so you can drill exactly one figure or mix a handful. The **×** on a group clears it, or selects all of it when it is already empty. With nothing checked at all, bars fall back to plain quarter notes.
+The **Rhythm figures** panel lists every figure the generator can use, grouped by kind, each with its notation. A figure has three states, and tapping it moves to the next one:
+
+- **off**, dimmed — never used.
+- **selected**, a teal dot — in the pool the generator draws from.
+- **guaranteed**, a brass dot with a glow and a light chasing its border — reserved a slot in *every* measure, so it is certain to come up.
+
+Guaranteed figures are how you drill one thing without giving up variety around it: guarantee the sixteenth triplet, leave a few plain figures selected, and every bar will contain that triplet and something different around it. Each guaranteed figure claims one random slot per measure. If several of them cannot all fit in the bar, or one is longer than the bar, whatever does not fit is quietly left out of that measure rather than breaking it.
+
+The **×** on a group clears it, or selects all of it when it is already empty. With nothing selected at all, bars fall back to plain quarter notes.
 
 A figure is only placed where its length divides the beat position, so two-beat figures start on odd-numbered beats and three-beat figures on beats 1 and 4. Figures longer than the bar (a whole note in 3/4, say) are simply never placed, and a beat that nothing fits gets a quarter note. Bars are regenerated until they hold at least two notes, so a selection of only long or silent figures can still yield a sparse bar.
 
@@ -29,15 +37,14 @@ While nothing is playing, the staff previews what your current settings produce,
 
 ## Settings
 
-- **Tempo** sets the beats per minute.
+- **The tempo dial** sets the beats per minute, from 40 to 200. Turn the dial anywhere on its face to sweep the tempo, tap **‹** and **›** for one beat at a time (hold them to run), or focus it and use the arrow keys. The current tempo is on the dial itself and the teal ring shows where it sits in the range. A change applies to the next run.
 - **Length** chooses one or two measures per rhythm.
 - **Time** sets the time signature: 2/4, 3/4, 4/4, 5/4, 6/4, or 7/4. The quarter note is the beat in all of them, so the tempo means the same thing in every meter. The staff shows the signature, the count-in runs one bar of it, and the metronome accents beat 1. Changing it mid-run takes effect on the next rhythm.
 - **continuous** keeps generating new rhythms until you press Stop. Unchecked, one rhythm plays once and stops at results.
 - **replay the same bar** repeats the current bar instead of moving on to a new one. Retry turns it on for you.
 - **moving line** shows the playhead sweeping the notation. It is off by default, so nothing moves unless you ask for it; it can be toggled during a run.
-- **Cowbell volume** and **Metronome volume** are live: they reach sounds that were already scheduled, so a change is audible on the next note. Both scales mean the same thing, so 100 on one is as loud as 100 on the other. The metronome starts at 30 so it sits under the cowbell.
+- **The two sound rows** — a cowbell for the rhythm and a metronome for the click — each have an icon and a volume slider. Tapping an icon mutes that sound outright and the row dims; moving its slider brings it back. Both are live: they reach sounds that were already scheduled, so a change is audible on the next note. Both scales mean the same thing, so 100 on one is as loud as 100 on the other. The metronome is on by default at 30, so it sits under the cowbell. On a wide enough window the rows are labelled `rhythm` and `metronome`.
 - **cowbell on my pass** plays the rhythm again, quieter, during your pass so you can hear your offset against it.
-- **metronome** plays a quarter-note click through both passes, accented on beat 1. It can be turned on and off during a run and takes effect on the next beat.
 - **score my taps** turns on tap tracking, and reveals the tap pad, the legend, the results line and the calibration panel. It is currently commented out in `index.html` while the app is being tried without it; uncommenting that one line brings all of it back.
 - **sound on my taps** plays a soft click on each tap when scoring is on.
 
@@ -59,6 +66,7 @@ Keyboards, touchscreens, and audio output all add latency, so raw tap timestamps
 
 - All timing uses the Web Audio clock (`AudioContext.currentTime`), not `setTimeout` or `Date.now`, so playback and scoring stay sample-accurate.
 - The cowbell is two detuned square oscillators through a bandpass filter, in the style of the 808 cowbell.
-- The cowbell and the metronome each run through their own gain node, which is why the volume sliders and the metronome checkbox affect sounds that were scheduled a bar in advance. Sounds are written at full scale and a single output gain provides the headroom, so equal slider positions really are equal loudness.
+- The cowbell and the metronome each run through their own gain node, which is why the volume sliders and the mute buttons affect sounds that were scheduled a bar in advance. Sounds are written at full scale and a single output gain provides the headroom, so equal slider positions really are equal loudness.
 - The notation is hand-drawn SVG rather than a music font, so rests and flags look stylized.
 - In continuous mode, the next rhythm's audio is scheduled while you play the current one, which is how the transition lands with no gap.
+- The screen wake lock uses the Screen Wake Lock API where it exists, and is simply skipped where it does not. It is taken when a run starts, dropped when the run stops or ends, and re-taken when you come back to the tab.
