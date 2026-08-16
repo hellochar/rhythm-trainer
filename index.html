@@ -32,28 +32,33 @@
   header{width:100%;max-width:900px;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px}
   h1{font-size:clamp(20px,4vw,28px);font-weight:800;letter-spacing:-.02em}
   h1 .accent{color:var(--brass-deep)}
-  .sub{color:var(--text-dim);font-size:13px}
-
-  .lamp{
-    display:inline-flex;align-items:center;gap:8px;
-    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;letter-spacing:.12em;
-    padding:6px 14px;border-radius:999px;border:1px solid #00000022;background:#00000008;
-    min-width:150px;justify-content:center;
-  }
-  .lamp .dot{width:9px;height:9px;border-radius:50%;background:var(--text-dim)}
-  .lamp[data-p="count"]  .dot{background:var(--ink)}
-  .lamp[data-p="listen"] .dot{background:var(--brass);box-shadow:0 0 10px var(--brass)}
-  .lamp[data-p="user"]   .dot{background:var(--teal);box-shadow:0 0 10px var(--teal)}
-  .lamp[data-p="results"] .dot{background:var(--good)}
-  .lamp[data-p="cal"]    .dot{background:#7d54c0}
 
   .chart{
     width:100%;max-width:900px;background:var(--paper);
     border:1px solid var(--paper-edge);border-radius:10px;
     box-shadow:0 6px 18px #00000014, inset 0 0 0 1px #ffffffcc;
-    padding:18px 10px 8px;position:relative;
+    padding:8px 10px 8px;position:relative;
   }
   .chart svg{display:block;width:100%;height:auto}
+  /* the strip along the top of the paper: phase readout centred, loop at the right */
+  .stage{position:relative;height:28px}
+  .stat{
+    position:absolute;left:36px;right:36px;top:3px;height:22px;line-height:22px;
+    text-align:center;pointer-events:none;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12px;letter-spacing:.14em;color:var(--text-dim);
+  }
+  .stat.count{font-size:23px;font-weight:800;letter-spacing:0;color:var(--ink)}
+  .stat.count span{display:inline-block;animation:countflash .6s ease-out forwards}
+  @keyframes countflash{0%{opacity:1;transform:scale(1.35)}40%{opacity:.95;transform:scale(1)}100%{opacity:.18;transform:scale(1)}}
+  .loopbtn{
+    position:absolute;right:0;top:0;width:30px;height:30px;padding:0;
+    background:none;border:1px solid transparent;border-radius:8px;color:#00000050;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .loopbtn svg{width:19px;height:19px}
+  .loopbtn:hover{filter:none;color:var(--ink)}
+  .loopbtn[aria-pressed=true]{color:var(--teal);background:#2d8b7a1c;border-color:#2d8b7a55}
 
   .controls{width:100%;max-width:900px;margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   button{
@@ -80,16 +85,28 @@
     width:100%;max-width:900px;margin-top:16px;
     display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:center;
   }
+  .dialcol{display:flex;flex-direction:column;align-items:center;gap:8px;flex:none}
+  .tapbtn{
+    background:#00000010;color:var(--text-dim);border:1px solid #00000030;
+    font-size:13px;font-weight:400;padding:5px 16px;border-radius:8px;letter-spacing:.04em;
+  }
+  .tapbtn.hit{background:#2d8b7a2e;color:var(--teal);border-color:#2d8b7a66}
   .dial{
     --d:190px;position:relative;width:var(--d);height:var(--d);flex:none;
     touch-action:none;user-select:none;cursor:ew-resize;
   }
-  .dial:focus-visible{outline:2px solid var(--teal);outline-offset:4px;border-radius:50%}
   .dial svg{display:block;width:100%;height:100%}
+  /* the reading is a real input so it can be typed into where there is a keyboard */
   .dial .bpmnum{
-    position:absolute;left:0;right:0;top:17%;text-align:center;pointer-events:none;
-    font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1;
+    position:absolute;left:14%;right:14%;top:16%;height:28px;
+    text-align:center;font:inherit;font-size:25px;font-weight:800;letter-spacing:-.02em;
+    color:var(--ink);background:none;border:none;border-radius:6px;padding:0;
+    -moz-appearance:textfield;appearance:textfield;
   }
+  .dial .bpmnum::-webkit-outer-spin-button,
+  .dial .bpmnum::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .dial .bpmnum:focus{outline:none;background:#00000010}
+  .dial.notype .bpmnum{pointer-events:none}
   .dial .bpmlabel{
     position:absolute;left:0;right:0;bottom:16%;text-align:center;pointer-events:none;
     font-size:10.5px;letter-spacing:.2em;color:var(--text-dim);
@@ -108,6 +125,7 @@
   .dial .nudge:hover{color:var(--ink);filter:none}
   .dial .dec{left:20%} .dial .inc{left:80%}
   @media (max-width:400px){ .dial{--d:162px} .dial .go{width:56px;height:56px} .dial .bpmnum{font-size:22px} }
+  .panel .paneltitle{font-weight:700;color:var(--text)}
 
   .mixer{flex:1 1 260px;min-width:250px;max-width:420px;display:flex;flex-direction:column;gap:10px}
   .srow{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
@@ -202,23 +220,33 @@
 </head>
 <body>
 <header>
-  <div>
-    <h1>Rhythm <span class="accent">Trainer</span></h1>
-    <div class="sub">It plays a notated rhythm on cowbell, then the same bar comes around again for you to play it back — in your head, on a practice pad, or with tap scoring turned on. New rhythms keep coming until you stop.</div>
-  </div>
-  <div class="lamp" id="lamp" data-p="ready"><span class="dot"></span><span id="lampText">READY</span></div>
+  <h1>Rhythm <span class="accent">Trainer</span></h1>
 </header>
 
-<div class="chart"><div id="score"></div></div>
+<div class="chart">
+  <div class="stage">
+    <div class="stat" id="stat"></div>
+    <button type="button" class="loopbtn" id="loopBtn" aria-pressed="false" aria-label="loop the same bar" title="loop the same bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M3 10V9a4 4 0 0 1 4-4h11"/><path d="m15 2 3 3-3 3"/>
+        <path d="M21 14v1a4 4 0 0 1-4 4H6"/><path d="m9 22-3-3 3-3"/>
+      </svg>
+    </button>
+  </div>
+  <div id="score"></div>
+</div>
 
 <div class="deck">
-  <div class="dial" id="dial" role="slider" tabindex="0" aria-label="tempo in beats per minute"
-       aria-valuemin="40" aria-valuemax="200" aria-valuenow="90">
-    <div class="bpmnum" id="bpmNum">90</div>
-    <div class="bpmlabel">BPM</div>
-    <button type="button" class="dbtn nudge dec" id="bpmDown" aria-label="slower">‹</button>
-    <button type="button" class="dbtn nudge inc" id="bpmUp" aria-label="faster">›</button>
-    <button type="button" class="dbtn go" id="goBtn" aria-label="start"></button>
+  <div class="dialcol">
+    <div class="dial" id="dial">
+      <input id="tempo" class="bpmnum" type="number" min="40" max="200" step="1" value="90"
+             inputmode="numeric" aria-label="tempo in beats per minute">
+      <div class="bpmlabel">BPM</div>
+      <button type="button" class="dbtn nudge dec" id="bpmDown" aria-label="slower">‹</button>
+      <button type="button" class="dbtn nudge inc" id="bpmUp" aria-label="faster">›</button>
+      <button type="button" class="dbtn go" id="goBtn" aria-label="start"></button>
+    </div>
+    <button type="button" class="tapbtn" id="tapBtn">tap tempo</button>
   </div>
   <div class="mixer">
     <div class="srow" id="rowBell">
@@ -255,7 +283,6 @@
 
 <div class="controls">
   <button id="retryBtn" class="secondary">Retry ↺</button>
-  <input type="number" id="tempo" min="40" max="200" step="1" value="90" hidden>
   <label class="field">Length
     <select id="measures"><option value="1">1 measure</option><option value="2">2 measures</option></select>
   </label>
@@ -270,7 +297,7 @@
     </select>
   </label>
   <label class="field"><input type="checkbox" id="continuous" checked> continuous</label>
-  <label class="field"><input type="checkbox" id="replay"> replay the same bar</label>
+  <input type="checkbox" id="replay" hidden>
   <label class="field"><input type="checkbox" id="showLine"> moving line</label>
   <label class="field"><input type="checkbox" id="echoSound"> cowbell on my pass</label>
   <!-- experimenting without tap scoring: uncommenting this brings back the tap
@@ -279,11 +306,11 @@
   <label class="field"><input type="checkbox" id="tapSound" checked> sound on my taps</label>
 </div>
 
-<details class="panel" id="figPanel">
-  <summary>Rhythm figures <span class="status" id="figCount"></span></summary>
-  <span class="fighint">Tap a figure once to include it, twice to guarantee it appears in every measure, a third time to drop it.</span>
+<div class="panel">
+  <div class="paneltitle">Rhythm figures <span class="status" id="figCount"></span></div>
+  <span class="fighint">Tap a figure once to include it, twice to guarantee it turns up in every rhythm, a third time to drop it.</span>
   <div class="figs" id="figs"></div>
-</details>
+</div>
 
 <div class="pad" id="pad">TAP HERE — or press SPACE</div>
 <div id="result"></div>
@@ -433,56 +460,106 @@ function cellEvents(cell, t0, key){
   });
   return out;
 }
+/* A guarantee is a promise about the rhythm, not about every measure: each
+   guaranteed cell is handed to one measure at random, and the whole rhythm is
+   retried while any of them ends up with nowhere to go. */
 function genRhythm(measures, bpb, cells, must=[]){
-  const events=[];
-  for(let mi=0;mi<measures;mi++){
-    genMeasure(bpb, cells, must).forEach(p=>{
-      events.push(...cellEvents(p.cell, mi*bpb+p.start, mi+'-'+p.start));
-    });
+  let bars=null, bestGot=-1;
+  for(let attempt=0; attempt<12; attempt++){
+    const per=Array.from({length:measures},()=>[]);
+    must.forEach(m=>per[Math.floor(Math.random()*measures)].push(m));
+    const tryBars=per.map(p=>genMeasure(bpb, cells, p));
+    const got=must.filter(m=>tryBars.some(b=>b.some(p=>p.cell===m))).length;
+    if(got===must.length){ bars=tryBars; break; }
+    if(got>bestGot){ bestGot=got; bars=tryBars; }
   }
+  const events=[];
+  bars.forEach((bar,mi)=>bar.forEach(p=>{
+    events.push(...cellEvents(p.cell, mi*bpb+p.start, mi+'-'+p.start));
+  }));
   return {measures, bpb, events, onsets:events.filter(e=>!e.rest).map(e=>e.t)};
 }
 
 /* ---------- notation rendering (SVG) ---------- */
-const PADL=20, SIGW=32, MPAD=44, BEATW=76.5, Y=76;
-/* layout follows the rendered rhythm's meter: LB beats per measure, MW wide */
-let LB=4, MW=MPAD+4*BEATW;
-function setLayout(bpb){ LB=bpb; MW=MPAD+bpb*BEATW; }
-function xOf(beat){ const mi=Math.floor(beat/LB), f=(beat-mi*LB)/LB;
-  return PADL + SIGW + mi*MW + 16 + f*(MW-MPAD); }
+const PADL=20, SIGW=32, MPAD=44, BEATW=76.5, Y=76, ROWH=112;
+/* layout follows the rendered rhythm: LB beats per measure, MW wide, RM
+   measures, PERROW of them on each staff row */
+let LB=4, MW=MPAD+4*BEATW, RM=1, PERROW=1;
+/* a two-measure rhythm squeezed into a phone width is unreadable, so below
+   this the measures stack one per row */
+const STACK_UNDER=560;
+function setLayout(bpb, measures){
+  LB=bpb; MW=MPAD+bpb*BEATW; RM=measures;
+  const w=$('score').clientWidth || 900;
+  PERROW = (measures>1 && w<STACK_UNDER) ? 1 : measures;
+}
+function rowOf(beat){ return Math.floor(Math.floor(beat/LB)/PERROW); }
+function xOf(beat){
+  const mi=Math.floor(beat/LB), f=(beat-mi*LB)/LB;
+  return PADL + SIGW + (mi%PERROW)*MW + 16 + f*(MW-MPAD);
+}
+function yOf(beat){ return Y + rowOf(beat)*ROWH; }
+/* Right-hand edge of the measure a beat sits in — where the line has to be
+   when that measure runs out. */
+function measureEnd(beat){ return PADL + SIGW + ((Math.floor(beat/LB)%PERROW)+1)*MW; }
+/* The playhead runs on its own mapping. xOf leaves a gap between a measure's
+   last note and its barline, so a line that followed it would stall on the
+   last beat and then jump across the gap; instead the line meets every beat
+   where its notes are and covers the gap over the measure's closing beat. */
+function xPlay(beat){
+  const total=LB*RM, b=Math.max(0, Math.min(beat, total));
+  const i=Math.min(Math.floor(b), total-1), f=b-i;
+  const a=xOf(i);
+  const wraps = (i+1>=total) || rowOf(i+1)!==rowOf(i);
+  const nx = wraps ? measureEnd(i) : xOf(i+1);
+  return a + f*(nx-a);
+}
+function yPlay(beat){
+  const total=LB*RM;
+  return Y + rowOf(Math.min(Math.max(beat,0), total-0.001))*ROWH;
+}
 function renderRhythm(r){
-  setLayout(r.bpb);
-  const W = PADL*2 + SIGW + r.measures*MW, H=134;
+  setLayout(r.bpb, r.measures);
+  const rows=Math.ceil(r.measures/PERROW);
+  const W = PADL*2 + SIGW + Math.min(r.measures,PERROW)*MW;
+  const H = Y + (rows-1)*ROWH + 58;
   let s='';
-  s+=`<line x1="${PADL}" y1="${Y}" x2="${W-PADL}" y2="${Y}" stroke="var(--ink)" stroke-width="1.4"/>`;
-  for(let mi=0;mi<=r.measures;mi++){
-    const bx = mi===0 ? PADL : PADL+SIGW+mi*MW;
-    s+=`<line x1="${bx}" y1="${Y-30}" x2="${bx}" y2="${Y+12}" stroke="var(--ink)" stroke-width="${mi===r.measures?3:1.6}"/>`;
-    if(mi===r.measures) s+=`<line x1="${bx-5}" y1="${Y-30}" x2="${bx-5}" y2="${Y+12}" stroke="var(--ink)" stroke-width="1.4"/>`;
+  for(let row=0; row<rows; row++){
+    const y=Y+row*ROWH, cols=Math.min(PERROW, r.measures-row*PERROW);
+    s+=`<line x1="${PADL}" y1="${y}" x2="${PADL+SIGW+cols*MW}" y2="${y}" stroke="var(--ink)" stroke-width="1.4"/>`;
+    for(let ci=0;ci<=cols;ci++){
+      const bx = ci===0 ? PADL : PADL+SIGW+ci*MW;
+      const fin = row===rows-1 && ci===cols;
+      s+=`<line x1="${bx}" y1="${y-30}" x2="${bx}" y2="${y+12}" stroke="var(--ink)" stroke-width="${fin?3:1.6}"/>`;
+      if(fin) s+=`<line x1="${bx-5}" y1="${y-30}" x2="${bx-5}" y2="${y+12}" stroke="var(--ink)" stroke-width="1.4"/>`;
+    }
+    // time signature, numerals stacked over the opening of each row
+    [[r.bpb, y-4],[4, y+17]].forEach(([n,ty])=>{
+      s+=`<text x="${PADL+18}" y="${ty}" font-size="21" font-weight="700" fill="var(--ink)" text-anchor="middle" font-family="Georgia,'Times New Roman',serif">${n}</text>`;
+    });
+    for(let c=0;c<cols;c++) for(let b=0;b<r.bpb;b++){
+      const beat=(row*PERROW+c)*r.bpb+b;
+      s+=`<text x="${xOf(beat)}" y="${y+34}" font-size="11" fill="#00000045" text-anchor="middle" font-family="ui-monospace,monospace">${b+1}</text>`;
+    }
   }
-  // time signature, numerals stacked over the opening of the staff
-  [[r.bpb, Y-4],[4, Y+17]].forEach(([n,ty])=>{
-    s+=`<text x="${PADL+18}" y="${ty}" font-size="21" font-weight="700" fill="var(--ink)" text-anchor="middle" font-family="Georgia,'Times New Roman',serif">${n}</text>`;
-  });
-  for(let b=0;b<r.measures*r.bpb;b++){
-    s+=`<text x="${xOf(b)}" y="${Y+34}" font-size="11" fill="#00000045" text-anchor="middle" font-family="ui-monospace,monospace">${b%r.bpb+1}</text>`;
-  }
-  s+=drawEvents(r.events, xOf, Y);
+  s+=drawEvents(r.events, xOf, yOf);
   s+=`<line id="playhead" x1="-10" y1="${Y-56}" x2="-10" y2="${Y+22}" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
   s+=`<g id="markers"></g>`;
   document.getElementById('score').innerHTML =
     `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
 }
 /* Draws beams, brackets, noteheads and rests for a list of events.
-   `xf` maps a beat position to x, `y` is the staff line. Shared by the staff
-   and by the figure previews in the library. */
-function drawEvents(evs, xf, y){
+   `xf` maps a beat position to x and `yf` maps it to its staff line, since the
+   staff can run over several rows. Shared by the staff and by the figure
+   previews in the library. A cell never crosses a barline, so a beam group is
+   always on one row. */
+function drawEvents(evs, xf, yf){
   let s='';
   const groups={};
   evs.forEach(e=>{ if(e.beamId && !e.rest){ (groups[e.beamId]=groups[e.beamId]||[]).push(e); }});
-  const beamY=y-44;
   for(const id in groups){
     const g=groups[id]; if(g.length<2) continue;
+    const y=yf(g[0].t), beamY=y-44;
     const x1=xf(g[0].t)+6.2, x2=xf(g[g.length-1].t)+6.2;
     const midX=(x1+x2)/2;
     if(g[0].bracket){
@@ -512,7 +589,7 @@ function drawEvents(evs, xf, y){
     }
   }
   evs.forEach(e=>{
-    const x=xf(e.t);
+    const x=xf(e.t), y=yf(e.t);
     if(e.rest){
       if(e.g==='wr'||e.g==='hr'){
         // whole rest hangs under the line, half rest sits on it
@@ -547,7 +624,7 @@ function addMark(html){
 
 /* ---------- figure library UI ---------- */
 function cellPreview(cell){
-  const evs=cellEvents(cell, 0, 'p'), y=58;
+  const evs=cellEvents(cell, 0, 'p'), y=58, yf=()=>y;
   let mg=cell.beats;
   for(let i=1;i<evs.length;i++) mg=Math.min(mg, evs[i].t-evs[i-1].t);
   const sc=Math.min(64, Math.max(24, 18/mg));       // wide enough for the tightest gap
@@ -555,13 +632,13 @@ function cellPreview(cell){
   const W=Math.round(xf(evs[evs.length-1].t)+26), H=74;
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`+
     `<line x1="2" y1="${y}" x2="${W-2}" y2="${y}" stroke="var(--ink)" stroke-width="1.2" opacity=".55"/>`+
-    drawEvents(evs, xf, y)+`</svg>`;
+    drawEvents(evs, xf, yf)+`</svg>`;
 }
 /* off → on → guaranteed → off */
 const NEXT_STATE={off:'on', on:'must', must:'off'};
 const STATE_TITLE={off:'not used — tap to include it',
-                   on:'included — tap to guarantee it in every measure',
-                   must:'guaranteed in every measure — tap to drop it'};
+                   on:'included — tap to guarantee it in every rhythm',
+                   must:'guaranteed in every rhythm — tap to drop it'};
 function buildFigs(){
   $('figs').innerHTML = GROUPS.map((grp,gi)=>
     `<fieldset class="figgroup"><legend>${grp.name}`+
@@ -650,15 +727,44 @@ function killAudio(){
   if(master){ try{master.disconnect();}catch(e){} }
   master=null; metBus=null; bellBus=null;
 }
+/* Retiming has to drop everything already scheduled and schedule it again, so
+   the old graph is ramped down over 20 ms and cut loose rather than yanked,
+   which would click on whatever bell is still ringing. */
+function fadeAudio(){
+  if(!master||!ctx){ killAudio(); return; }
+  const m=master, t=ctx.currentTime;
+  try{
+    m.gain.cancelScheduledValues(t);
+    m.gain.setValueAtTime(m.gain.value, t);
+    m.gain.linearRampToValueAtTime(0, t+0.02);
+  }catch(e){}
+  setTimeout(()=>{ try{m.disconnect();}catch(e){} }, 400);
+  master=null; metBus=null; bellBus=null;
+}
 
 /* ---------- state / flow ---------- */
 const $=id=>document.getElementById(id);
 const state={phase:'ready', rhythm:null, prev:null, cycle:null, pending:null, single:false,
-             beat:0.6, expected:[], win:0.12, extras:0, cal:null, raf:0};
-const PHASE_TEXT={ready:'READY',count:'COUNT-IN',listen:'LISTEN',user:'YOUR TURN',results:'RESULTS',cal:'CALIBRATING'};
+             beat:0.6, expected:[], win:0.12, extras:0, cal:null, raf:0, count:0};
+/* the readout above the staff: nothing at rest, the beat number during the
+   count-in (driven from the loop), a word for the passes */
+const PHASE_TEXT={ready:'',count:'',listen:'LISTEN',user:'YOUR TURN',results:'RESULTS',cal:'CALIBRATING'};
+function setStat(t){
+  const el=$('stat');
+  el.classList.remove('count');
+  if(el.textContent!==t) el.textContent=t;
+}
+/* each count-in beat gets its own node so the flash animation restarts */
+function showCount(n){
+  if(state.count===n) return;
+  state.count=n;
+  const el=$('stat');
+  el.classList.add('count');
+  el.innerHTML=`<span style="animation-duration:${Math.max(0.2, state.beat).toFixed(3)}s">${n}</span>`;
+}
 function setPhase(p){
   state.phase=p;
-  $('lamp').dataset.p=p; $('lampText').textContent=PHASE_TEXT[p];
+  if(p!=='count'){ state.count=0; setStat(PHASE_TEXT[p]); }
   $('pad').classList.toggle('hot', p==='user' && scoringOn());
   updateGo();
 }
@@ -692,33 +798,63 @@ document.addEventListener('visibilitychange',()=>{
 /* what the next cycle plays: the same bar again while replay is on */
 function nextRhythm(){ return $('replay').checked ? state.rhythm : makeRhythm(); }
 
-function scheduleCycle(r, start, beat){
+/* `from` skips anything that would land in the past, which is what lets a
+   retime re-schedule a cycle that is already half played */
+function scheduleCycle(r, start, beat, from=-Infinity){
   const total=r.measures*r.bpb;
-  r.onsets.forEach(b=>cowbell(start+b*beat));
+  r.onsets.forEach(b=>{ const t=start+b*beat; if(t>from) cowbell(t); });
   const user=start+total*beat, end=user+total*beat;
-  if($('echoSound').checked) r.onsets.forEach(b=>cowbell(user+b*beat, 0.45));
-  for(let i=0;i<total*2;i++) met(start+i*beat, i%r.bpb===0);
+  if($('echoSound').checked) r.onsets.forEach(b=>{ const t=user+b*beat; if(t>from) cowbell(t, 0.45); });
+  for(let i=0;i<total*2;i++){ const t=start+i*beat; if(t>from) met(t, i%r.bpb===0); }
   return {rhythm:r, listen:start, user, end};
 }
+function scheduleCountIn(listenAt, bpb, beat, from=-Infinity){
+  for(let i=0;i<bpb;i++){
+    const t=listenAt-(bpb-i)*beat;
+    if(t>from) click(t, i===0, 0.7);
+  }
+}
 function prepareExpected(){
-  const cy=state.cycle, beat=state.beat;
-  const ex=cy.rhythm.onsets.map(b=>({beat:b, t:cy.user+b*beat, hit:false, missMarked:false, delta:0}));
+  state.expected=state.cycle.rhythm.onsets.map(b=>({beat:b, t:0, hit:false, missMarked:false, delta:0}));
+  state.extras=0;
+  retimeExpected();
+}
+function retimeExpected(){
+  const cy=state.cycle, beat=state.beat, ex=state.expected;
+  ex.forEach(e=>{ e.t=cy.user+e.beat*beat; });
   let mg=beat;
   for(let i=1;i<ex.length;i++) mg=Math.min(mg, ex[i].t-ex[i-1].t);
-  state.expected=ex;
   state.win=Math.max(0.08, Math.min(0.17, mg*0.45));
-  state.extras=0;
+}
+/* A tempo change mid-run has to move sound that is already scheduled, so the
+   whole schedule is rebuilt from where the music has got to: the cycle is
+   re-anchored so the current beat position is unchanged, and only what is
+   still in the future is scheduled again. */
+function retime(){
+  const cy=state.cycle;
+  if(!cy || !ctx) return;
+  const b1=state.beat, b2=60/getTempo();
+  if(Math.abs(b2-b1)<1e-6) return;
+  const now=ctx.currentTime;
+  const pos=(now-cy.listen)/b1;              // beats from this cycle's downbeat
+  fadeAudio(); audio();
+  state.beat=b2;
+  const from=now+0.03, listen=now-pos*b2, bpb=cy.rhythm.bpb;
+  if(pos<0) scheduleCountIn(listen, bpb, b2, from);
+  state.cycle=scheduleCycle(cy.rhythm, listen, b2, from);
+  retimeExpected();
+  if(state.pending)
+    state.pending.cycle=scheduleCycle(state.pending.rhythm, state.cycle.end, b2, from);
 }
 function startRun(fresh, single){
   stopAll(false);
   if(fresh || !state.rhythm) state.rhythm=makeRhythm();
   renderRhythm(state.rhythm);
   const c=audio(); c.resume();
-  const bpm=+$('tempo').value||90;
-  state.beat=60/bpm;
+  state.beat=60/getTempo();
   state.single=single;
   const t0=c.currentTime+0.18, bpb=state.rhythm.bpb;
-  for(let i=0;i<bpb;i++) click(t0+i*state.beat, i===0, 0.7);
+  scheduleCountIn(t0+bpb*state.beat, bpb, state.beat);
   state.cycle=scheduleCycle(state.rhythm, t0+bpb*state.beat, state.beat);
   state.pending=null;
   prepareExpected();
@@ -733,6 +869,8 @@ function loop(){
   const ph=$('score').querySelector('#playhead');
   if(now<cy.listen){
     setIf('count'); if(ph) ph.setAttribute('opacity','0');
+    const bpb=cy.rhythm.bpb, n=Math.floor((now-(cy.listen-bpb*state.beat))/state.beat)+1;
+    showCount(Math.max(1, Math.min(bpb, n)));
   } else if(now<cy.user){
     setIf('listen');
     movePlayhead(ph,(now-cy.listen)/state.beat,'var(--brass)');
@@ -767,12 +905,14 @@ function setIf(p){ if(state.phase!==p) setPhase(p); }
 function movePlayhead(ph, beatPos, color){
   if(!ph) return;
   if(!$('showLine').checked){ ph.setAttribute('opacity','0'); return; }
-  const x=xOf(Math.min(Math.max(beatPos,0), state.rhythm.measures*state.rhythm.bpb-0.001));
+  const x=xPlay(beatPos), y=yPlay(beatPos);
   ph.setAttribute('x1',x); ph.setAttribute('x2',x);
+  ph.setAttribute('y1',y-56); ph.setAttribute('y2',y+22);
   ph.setAttribute('stroke',color); ph.setAttribute('opacity','0.85');
 }
 function stopAll(reset=true){
   cancelAnimationFrame(state.raf);
+  clearTimeout(retimeT);
   killAudio(); state.cycle=null; state.pending=null;
   keepAwake(false);
   if(reset){
@@ -787,7 +927,7 @@ function markMisses(now){
   state.expected.forEach(e=>{
     if(!e.hit && !e.missMarked && now > e.t + state.win){
       e.missMarked=true;
-      addMark(`<circle cx="${xOf(e.beat)}" cy="${Y+18}" r="5" fill="none" stroke="var(--bad)" stroke-width="2.4"/>`);
+      addMark(`<circle cx="${xOf(e.beat)}" cy="${yOf(e.beat)+18}" r="5" fill="none" stroke="var(--bad)" stroke-width="2.4"/>`);
     }
   });
 }
@@ -802,13 +942,13 @@ function handleScoredTap(now){
     best.hit=true; best.delta=(adj-best.t)*1000;
     const a=Math.abs(best.delta);
     const col = a<=40?'var(--good)': a<=90?'var(--ok)':'var(--bad)';
-    const cx=xOf(best.beat);
-    addMark(`<circle cx="${cx}" cy="${Y+18}" r="5" fill="${col}"/>`+
-      `<text x="${cx}" y="${Y+34+14}" font-size="10" fill="#00000070" text-anchor="middle" font-family="ui-monospace,monospace">${best.delta>0?'+':''}${Math.round(best.delta)}</text>`);
+    const cx=xOf(best.beat), cy2=yOf(best.beat);
+    addMark(`<circle cx="${cx}" cy="${cy2+18}" r="5" fill="${col}"/>`+
+      `<text x="${cx}" y="${cy2+48}" font-size="10" fill="#00000070" text-anchor="middle" font-family="ui-monospace,monospace">${best.delta>0?'+':''}${Math.round(best.delta)}</text>`);
   } else {
     state.extras++;
     const b=Math.max(0,Math.min((adj-cy.user)/state.beat, state.rhythm.measures*state.rhythm.bpb-0.01));
-    addMark(`<text x="${xOf(b)}" y="${Y+22}" font-size="13" fill="var(--bad)" text-anchor="middle" font-weight="bold">✕</text>`);
+    addMark(`<text x="${xOf(b)}" y="${yOf(b)+22}" font-size="13" fill="var(--bad)" text-anchor="middle" font-weight="bold">✕</text>`);
   }
 }
 function summarize(){
@@ -853,8 +993,7 @@ function flashPad(){
 $('pad').addEventListener('pointerdown',e=>{e.preventDefault();registerTap();});
 window.addEventListener('keydown',e=>{
   if(e.code==='Space'||e.code==='Enter'){
-    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON'
-       ||e.target.id==='dial') return;
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='BUTTON') return;
     e.preventDefault(); registerTap();
   }
 });
@@ -902,7 +1041,7 @@ function retryTarget(){
 }
 function retryRun(){
   const r=retryTarget();
-  $('replay').checked=true; saveSettings();
+  $('replay').checked=true; syncLoop(); saveSettings();
   state.rhythm=r; state.prev=null;
   startRun(false, false);
 }
@@ -939,8 +1078,8 @@ function loadSettings(){
 
 /* ---------- tempo dial ---------- */
 /* A jog wheel: turning it anywhere on the face moves the tempo by how far you
-   turned, so it works the same wherever you grab it. The hidden #tempo input
-   stays the one source of truth, which keeps saving and loading unchanged. */
+   turned, so it works the same wherever you grab it. The #tempo input on the
+   face is the one source of truth, which keeps saving and loading unchanged. */
 const DIAL_R=72, DIAL_C=2*Math.PI*DIAL_R, DIAL_SWEEP=270/360, BPM_PER_DEG=0.5;
 const ICON_PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.6 20 12 7.5 19.4z"/></svg>';
 const ICON_STOP='<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.2"/></svg>';
@@ -964,19 +1103,54 @@ function getTempo(){ return +$('tempo').value||90; }
 function setTempo(v){
   const lo=+$('tempo').min, hi=+$('tempo').max;
   v=Math.max(lo, Math.min(hi, Math.round(v)));
-  if(v===getTempo()) return;
+  if(v===getTempo() && $('tempo').value!=='') return;
   $('tempo').value=v;
-  updateDial();
+  tempoChanged();
 }
 function updateDial(){
-  const lo=+$('tempo').min, hi=+$('tempo').max, v=getTempo();
-  $('bpmNum').textContent=v;
-  $('dial').setAttribute('aria-valuenow', v);
-  $('dial').setAttribute('aria-valuetext', v+' bpm');
+  const lo=+$('tempo').min, hi=+$('tempo').max;
+  const v=Math.max(lo, Math.min(hi, getTempo()));
   const arc=$('dialArc');
   if(arc) arc.setAttribute('stroke-dasharray',
     `${(DIAL_C*DIAL_SWEEP*(v-lo)/(hi-lo)).toFixed(1)} ${Math.ceil(DIAL_C)}`);
 }
+/* Anything already playing follows the new tempo. Rebuilding the schedule is
+   not free, so a turn of the dial coalesces into one retime once it settles. */
+let retimeT=0;
+function tempoChanged(){
+  const raw=$('tempo').value.trim(), v=+raw;
+  // half-typed values are left alone until the field is committed
+  if(raw==='' || !isFinite(v) || v<+$('tempo').min || v>+$('tempo').max) return;
+  updateDial();
+  if(state.cycle){ clearTimeout(retimeT); retimeT=setTimeout(retime, 140); }
+}
+/* typing is only offered where there is a keyboard; on a touch screen the
+   reading stays out of the way of the turn */
+const CAN_TYPE = window.matchMedia && matchMedia('(pointer:fine)').matches;
+if(!CAN_TYPE){ $('tempo').readOnly=true; $('dial').classList.add('notype'); }
+$('tempo').addEventListener('input',tempoChanged);
+$('tempo').addEventListener('change',()=>{ setTempo(getTempo()); saveSettings(); });
+$('tempo').addEventListener('blur',()=>{ setTempo(getTempo()); saveSettings(); });
+$('tempo').addEventListener('keydown',e=>{ if(e.key==='Enter') $('tempo').blur(); });
+
+/* ---------- tap tempo ---------- */
+/* taps are timed on the audio clock like everything else */
+let tapTimes=[];
+function tapTempo(){
+  const c=audio(); c.resume();
+  const now=c.currentTime;
+  if(tapTimes.length && now-tapTimes[tapTimes.length-1] > 2.5) tapTimes=[];
+  tapTimes.push(now);
+  if(tapTimes.length>5) tapTimes.shift();
+  if(tapTimes.length>=2){
+    const span=tapTimes[tapTimes.length-1]-tapTimes[0];
+    if(span>0){ setTempo(60*(tapTimes.length-1)/span); saveSettings(); }
+  }
+  const b=$('tapBtn');
+  b.classList.add('hit');
+  setTimeout(()=>b.classList.remove('hit'), 110);
+}
+$('tapBtn').addEventListener('click', tapTempo);
 let goShows=null;
 function isRunning(){ return !!state.cycle && state.phase!=='ready' && state.phase!=='results'; }
 function updateGo(){
@@ -996,7 +1170,8 @@ $('dial').addEventListener('pointerdown',e=>{
   e.preventDefault();
   // a gesture that starts on a ‹ › has to travel a little before it counts as
   // a turn, so holding one to repeat is not stolen by a shaky finger
-  turn={a:dialAngle(e), acc:0, travel:0, held:!!e.target.closest('.nudge')};
+  turn={a:dialAngle(e), acc:0, travel:0, held:!!e.target.closest('.nudge'),
+        onNum:e.target===$('tempo')};
   try{ $('dial').setPointerCapture(e.pointerId); }catch(err){}
 });
 $('dial').addEventListener('pointermove',e=>{
@@ -1016,15 +1191,12 @@ $('dial').addEventListener('pointermove',e=>{
    pointerup — the repeat has to be stopped from here */
 ['pointerup','pointercancel'].forEach(t=>$('dial').addEventListener(t,()=>{
   endNudge();
-  if(!turn) return; turn=null; saveSettings();
+  if(!turn) return;
+  // pointerdown was swallowed to stop the drag selecting text, so a tap that
+  // never became a turn has to hand the reading its focus by hand
+  if(turn.onNum && turn.travel<10 && !$('tempo').readOnly){ $('tempo').focus(); $('tempo').select(); }
+  turn=null; saveSettings();
 }));
-$('dial').addEventListener('keydown',e=>{
-  const k=e.key;
-  const d = k==='ArrowRight'||k==='ArrowUp' ? 1 : k==='ArrowLeft'||k==='ArrowDown' ? -1
-          : k==='PageUp' ? 5 : k==='PageDown' ? -5 : 0;
-  if(!d) return;
-  e.preventDefault(); setTempo(getTempo()+d); saveSettings();
-});
 /* the ‹ › nudges step by one and repeat while held */
 let nudgeStop=null;
 function endNudge(){ if(nudgeStop){ const f=nudgeStop; nudgeStop=null; f(); saveSettings(); } }
@@ -1044,12 +1216,20 @@ nudge('bpmDown', -1);
 
 /* ---------- buttons ---------- */
 /* The dial's centre is the start/stop button, and it is the user gesture that
-   unlocks audio on mobile. */
+   unlocks audio on mobile. It plays the bar already on the staff rather than
+   rolling a new one — the staff is a promise about what you are about to hear. */
 $('goBtn').addEventListener('click',()=>{
   if(isRunning()) stopAll();
-  else startRun(true, !$('continuous').checked);
+  else startRun(false, !$('continuous').checked);
 });
 $('retryBtn').addEventListener('click',retryRun);
+/* replay lives on the loop button over the staff; the checkbox behind it is
+   what persists, and Retry still reaches for it */
+function syncLoop(){ $('loopBtn').setAttribute('aria-pressed', $('replay').checked); }
+$('loopBtn').addEventListener('click',()=>{
+  $('replay').checked=!$('replay').checked;
+  syncLoop(); saveSettings();
+});
 /* tapping a sound's icon mutes it outright; moving its slider brings it back */
 [['bellIcon','bellOn','bellVol'],['metIcon','metronome','metVol']].forEach(([icon,box,vol])=>{
   $(icon).addEventListener('click',()=>{
@@ -1061,24 +1241,43 @@ $('retryBtn').addEventListener('click',retryRun);
     syncVol();
   });
 });
-/* while nothing is running, the staff previews whatever the settings now produce */
+/* While nothing is running, the staff previews whatever the settings now
+   produce. Only the settings that change what can be generated roll a new bar:
+   the staff is not a fidget toy, and a volume slider must not reshuffle it. */
+const GEN_IDS=['measures','timesig'];
 function previewIdle(){
   if(state.cycle) return;
   state.rhythm=makeRhythm(); state.prev=null;
   renderRhythm(state.rhythm);
   $('result').innerHTML='';
 }
-document.addEventListener('change',()=>{ saveSettings(); previewIdle(); });
+document.addEventListener('change',e=>{
+  saveSettings();
+  if(e.target && GEN_IDS.includes(e.target.id)) previewIdle();
+});
 document.querySelectorAll('details[id]').forEach(d=>d.addEventListener('toggle',saveSettings));
+/* the staff stacks its measures when the window is too narrow for one row */
+let resizeT=0;
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeT);
+  resizeT=setTimeout(()=>{
+    if(!state.rhythm) return;
+    const was=PERROW;
+    setLayout(state.rhythm.bpb, state.rhythm.measures);
+    if(PERROW!==was) renderRhythm(state.rhythm);
+  }, 120);
+});
 
 buildFigs();
 buildDial();
 loadSettings();
 syncFigs();
 syncVol();
+syncLoop();
 updateDial();
 updateGo();
 updateScoringUI();
+setStat('');
 state.rhythm=makeRhythm();
 renderRhythm(state.rhythm);
 </script>
