@@ -19,6 +19,7 @@
     --bad:#bf4a3c;
     --text:#241f17;
     --text-dim:#6d6555;
+    --sw:340px;                 /* width of the saved-bars sidebar */
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -74,8 +75,53 @@
   }
   .favbtn[aria-pressed=true] svg{fill:var(--brass)}
 
-  /* ----- saved bars ----- */
-  .favlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:10px}
+  /* ----- saved bars: a toggle in the header, a sidebar behind it ----- */
+  .favtoggle{
+    display:flex;align-items:center;gap:7px;flex:none;
+    font-size:13px;font-weight:600;letter-spacing:.02em;
+    padding:6px 13px;border-radius:999px;
+    background:#00000010;color:var(--text);border:1px solid #00000030;
+  }
+  .favtoggle svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+  .favtoggle[aria-expanded=true]{
+    background:color-mix(in srgb,var(--brass) 20%,transparent);
+    border-color:color-mix(in srgb,var(--brass) 50%,transparent);
+    color:var(--brass-deep);
+  }
+  .favtoggle[aria-expanded=true] svg{fill:var(--brass)}
+  .scrim{
+    position:fixed;inset:0;z-index:8;background:#00000038;
+    opacity:0;pointer-events:none;transition:opacity .18s ease;
+  }
+  body.favopen .scrim{opacity:1;pointer-events:auto}
+  .sidebar{
+    position:fixed;top:0;right:0;bottom:0;z-index:9;
+    width:min(var(--sw),86vw);display:flex;flex-direction:column;
+    background:var(--paper);border-left:1px solid var(--paper-edge);
+    box-shadow:-8px 0 24px #00000018;
+    transform:translateX(100%);visibility:hidden;
+    transition:transform .18s ease, visibility .18s;
+  }
+  body.favopen .sidebar{transform:none;visibility:visible}
+  .sidehead{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;
+    padding:12px 14px 10px;border-bottom:1px solid #00000018;font-weight:700;
+  }
+  .sideclose{
+    padding:2px 11px;font-size:17px;line-height:1.3;font-weight:400;
+    background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:8px;
+  }
+  /* contain, so flicking past the end of the list does not scroll the page
+     underneath it */
+  .sidebody{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 14px 24px}
+  /* wide enough for the sidebar to sit beside the content instead of over it:
+     the page gives up the width and nothing is covered, so there is no scrim.
+     DOCK_W in the script has to agree with this. */
+  @media (min-width:1240px){
+    body.favopen{padding-right:var(--sw)}
+    .scrim{display:none}
+  }
+  .favlist{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
   .favcard{position:relative;border:1px solid #00000026;border-radius:10px;background:#ffffff5c;padding:3px}
   .favload{
     display:block;width:100%;padding:2px 4px 3px;text-align:left;
@@ -90,7 +136,7 @@
     position:absolute;right:5px;bottom:5px;padding:1px 8px;font-size:13px;line-height:1.4;
     font-weight:400;background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:6px;
   }
-  .favempty{margin-top:10px;font-size:13px;color:var(--text-dim)}
+  .favempty{margin-top:12px;font-size:13px;line-height:1.5;color:var(--text-dim)}
 
   .controls{width:100%;max-width:900px;margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   button{
@@ -262,6 +308,12 @@
 <body>
 <header>
   <h1>Rhythm <span class="accent">Trainer</span></h1>
+  <button type="button" class="favtoggle" id="favToggle" aria-expanded="false" aria-controls="favBar">
+    <svg viewBox="0 0 24 24" stroke-linecap="round">
+      <path d="M12 3.2l2.7 5.6 6.1.85-4.45 4.3 1.07 6.05L12 17.15 6.58 20l1.07-6.05L3.2 9.65l6.1-.85z"/>
+    </svg>
+    <span id="favCount">0 saved</span>
+  </button>
 </header>
 
 <div class="chart">
@@ -351,12 +403,6 @@
   <label class="field" id="tapSoundField"><input type="checkbox" id="tapSound" checked> sound on my taps</label>
 </div>
 
-<details class="panel" id="favPanel">
-  <summary>Saved bars <span class="status" id="favCount"></span></summary>
-  <div class="favlist" id="favList"></div>
-  <div class="favempty" id="favEmpty">Nothing saved yet. Tap the ☆ above the staff to keep the bar in front of you, along with its tempo.</div>
-</details>
-
 <div class="panel">
   <div class="paneltitle">Rhythm figures <span class="status" id="figCount"></span></div>
   <span class="fighint">Tap a figure once to include it, twice to guarantee it turns up in every rhythm, a third time to drop it.</span>
@@ -381,6 +427,19 @@
     <span class="status" id="calStatus">Tap along with the steady clicks. The measured average delay of your taps becomes the offset, and it is subtracted from your taps when scoring. You can also type a value by hand. Negative values mean you tend to tap early.</span>
   </div>
 </details>
+
+<div class="scrim" id="favScrim"></div>
+<aside class="sidebar" id="favBar" aria-label="saved bars" aria-hidden="true">
+  <div class="sidehead">
+    Saved bars
+    <button type="button" class="sideclose" id="favClose" aria-label="close saved bars">×</button>
+  </div>
+  <div class="sidebody">
+    <div class="favlist" id="favList"></div>
+    <div class="favempty" id="favEmpty">Nothing saved yet. Tap the ☆ above the staff to keep the bar in front of you, along with the tempo you were reading it at.</div>
+  </div>
+</aside>
+<input type="checkbox" id="favOpen" hidden>
 
 <script>
 "use strict";
@@ -1175,7 +1234,23 @@ function buildFavs(){
       `<button type="button" class="favdel" data-i="${i}" title="remove this bar" aria-label="remove this bar">×</button>`+
     `</div>`).join('');
   $('favEmpty').style.display = favs.length ? 'none' : '';
-  $('favCount').textContent = favs.length ? `— ${favs.length} saved` : '';
+  $('favCount').textContent = `${favs.length} saved`;
+  $('favToggle').setAttribute('aria-label', `${favs.length} saved bars`);
+}
+/* Where the window is wide enough the sidebar sits beside the content and the
+   page simply gives up the width; anywhere narrower it lies over the page, so
+   it takes a scrim and a tap outside closes it. DOCK_W has to agree with the
+   media query in the stylesheet. */
+const DOCK_W=1240;
+function docks(){ return !!window.matchMedia && matchMedia(`(min-width:${DOCK_W}px)`).matches; }
+function favIsOpen(){ return document.body.classList.contains('favopen'); }
+function setFavOpen(on){
+  document.body.classList.toggle('favopen', on);
+  $('favToggle').setAttribute('aria-expanded', on);
+  $('favBar').setAttribute('aria-hidden', !on);
+  $('favOpen').checked=on;                 // hidden input, so it persists for free
+  saveSettings();
+  relayout();                              // docking narrows the staff
 }
 function toggleFav(){
   const r=state.rhythm; if(!r) return;
@@ -1185,7 +1260,7 @@ function toggleFav(){
     const first=!favs.length;
     favs.unshift({key:k, bpm:getTempo(), rhythm:JSON.parse(JSON.stringify(r))});
     if(favs.length>FAV_MAX) favs.length=FAV_MAX;
-    if(first) $('favPanel').open=true;      // so the first one is seen landing
+    if(first) setFavOpen(true);             // so the first one is seen landing
   }
   saveFavs(); buildFavs(); syncFav();
 }
@@ -1201,10 +1276,16 @@ function loadFav(i){
   setTempo(f.bpm);
   state.rhythm=r; state.prev=null;
   saveSettings();
+  // where the sidebar covers the page, get out of the way of the bar just loaded
+  if(!docks()) setFavOpen(false);
   if(isRunning()) startRun(false);
   else{ renderRhythm(r); $('result').innerHTML=''; }
 }
 $('favBtn').addEventListener('click', toggleFav);
+$('favToggle').addEventListener('click',()=>setFavOpen(!favIsOpen()));
+$('favClose').addEventListener('click',()=>setFavOpen(false));
+$('favScrim').addEventListener('click',()=>setFavOpen(false));
+window.addEventListener('keydown',e=>{ if(e.key==='Escape' && favIsOpen()) setFavOpen(false); });
 $('favList').addEventListener('click',e=>{
   const d=e.target.closest('.favdel');
   if(d){ favs.splice(+d.dataset.i,1); saveFavs(); buildFavs(); syncFav(); return; }
@@ -1428,16 +1509,19 @@ document.addEventListener('change',e=>{
    checkbox reaches the pass that is already playing */
 $('echoSound').addEventListener('change', syncVol);
 document.querySelectorAll('details[id]').forEach(d=>d.addEventListener('toggle',saveSettings));
-/* the staff stacks its measures when the window is too narrow for one row */
+/* The staff stacks its measures when it is too narrow for one row, so anything
+   that changes how much width the staff has — the window, or the sidebar
+   taking its share of it — has to look again. */
+function relayout(){
+  if(!state.rhythm) return;
+  const was=PERROW;
+  setLayout(state.rhythm.bpb, state.rhythm.measures);
+  if(PERROW!==was) renderRhythm(state.rhythm);
+}
 let resizeT=0;
 window.addEventListener('resize',()=>{
   clearTimeout(resizeT);
-  resizeT=setTimeout(()=>{
-    if(!state.rhythm) return;
-    const was=PERROW;
-    setLayout(state.rhythm.bpb, state.rhythm.measures);
-    if(PERROW!==was) renderRhythm(state.rhythm);
-  }, 120);
+  resizeT=setTimeout(relayout, 120);
 });
 
 buildFigs();
@@ -1451,6 +1535,9 @@ syncLoop();
 updateDial();
 updateGo();
 updateScoringUI();
+/* it is only restored where it docks: coming back to a page hidden under an
+   overlay is not a welcome */
+setFavOpen($('favOpen').checked && docks());
 setStat('');
 state.rhythm=makeRhythm();
 renderRhythm(state.rhythm);

@@ -25,9 +25,13 @@ The word above the staff tells you which pass you are in. At rest it says nothin
 
 The **☆** in the top-left corner of the staff keeps the bar in front of you, along with the tempo you were reading it at. The star fills in once a bar is saved, and tapping it again drops that bar, so it tells you at a glance whether what you are looking at is one you already kept.
 
-Saved bars collect in the **Saved bars** panel, each drawn as its own small staff so you can pick one out by its notation rather than by a name. Tapping one loads it back: the bar returns to the staff, the tempo goes back to what it was saved at, and the meter and the length come with it. It also switches the loop button on, the way Retry does, so the bar stays in front of you instead of being replaced by a fresh one on the next start. Load one while a run is going and the music restarts on it at its own tempo. The **×** on a card removes it.
+They collect behind the **☆ X saved** button in the top-right corner of the page, which opens a sidebar down the right-hand side. Each bar is drawn as its own small staff, so you pick one out by its notation rather than by a name, with the tempo, the meter and the length underneath it.
 
-They are kept in browser local storage, separately from the settings, and the newest sixty are held.
+Tapping one loads it back: the bar returns to the staff, the tempo goes back to what it was saved at, and the meter and the length come with it. It also switches the loop button on, the way Retry does, so the bar stays in front of you instead of being replaced by a fresh one on the next start. Load one while a run is going and the music restarts on it at its own tempo. The **×** on a card removes it.
+
+On a wide enough window the sidebar sits beside the app, which shifts over to make room, so you can keep the list open while you play. Anywhere narrower it lies over the page instead, and tapping the page outside it, pressing Escape, or loading a bar closes it again. Where it sits alongside, it is still open when you come back; where it covers the page it always starts closed.
+
+Saved bars are kept in browser local storage, separately from the settings, and the newest sixty are held.
 
 ## Rhythm figures
 
@@ -45,7 +49,7 @@ A figure is only placed where its length divides the beat position, so two-beat 
 
 While nothing is playing, the staff previews what your current settings produce. It rerolls when you change something that changes what can be generated — the figures, the meter, the length — and when you press Start, and it stays put for everything else, so a nudge of a volume slider does not throw away the bar you were reading. With the loop button on, Start keeps the bar in front of you instead.
 
-A two-measure rhythm sits on one staff on a wide window and stacks onto two rows when the window is too narrow to read it, which is what phones get.
+A two-measure rhythm sits on one staff on a wide window and stacks onto two rows when the window is too narrow to read it, which is what phones get. Opening the saved-bars sidebar counts as narrowing the window, so it restacks for that too.
 
 ## Settings
 
