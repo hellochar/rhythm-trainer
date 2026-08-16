@@ -138,6 +138,41 @@
   }
   .favempty{margin-top:12px;font-size:13px;line-height:1.5;color:var(--text-dim)}
 
+  /* ----- editing a beat: a target over every pulse, and the picker ----- */
+  .beathit{fill:var(--brass);fill-opacity:0;pointer-events:all;cursor:pointer;transition:fill-opacity .1s ease}
+  .beathit:hover{fill-opacity:.1}
+  .beatpop{
+    position:fixed;z-index:12;width:min(336px,92vw);
+    background:var(--paper);border:1px solid var(--paper-edge);border-radius:12px;
+    box-shadow:0 12px 30px #00000026, inset 0 0 0 1px #ffffffcc;
+    padding:8px 11px 4px;
+  }
+  .beatpop[hidden]{display:none}
+  /* a tick of the same paper, tied to the beat the picker came out of */
+  .bpcaret{
+    position:absolute;top:-6px;width:11px;height:11px;background:var(--paper);
+    border-left:1px solid var(--paper-edge);border-top:1px solid var(--paper-edge);
+    transform:rotate(45deg);
+  }
+  .beatpop.above .bpcaret{top:auto;bottom:-6px;transform:rotate(225deg)}
+  .bphead{display:flex;justify-content:flex-end}
+  .bpclose{
+    padding:0 7px;font-size:16px;line-height:1.4;font-weight:400;
+    background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:7px;
+  }
+  .bpbody{max-height:min(48vh,340px);overflow-y:auto;overscroll-behavior:contain;padding-bottom:8px}
+  .bpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px;margin-top:6px}
+  .bpopt{
+    display:flex;align-items:center;justify-content:center;padding:2px 4px;
+    background:#00000010;border:1px solid #00000033;border-radius:9px;
+  }
+  .bpopt svg{display:block;height:36px;width:auto;max-width:100%}
+  .bpopt:hover{filter:none;background:#0000001c}
+  .bpopt[aria-pressed=true]{
+    background:color-mix(in srgb,var(--brass) 22%,transparent);
+    border-color:color-mix(in srgb,var(--brass) 55%,transparent);
+  }
+
   .controls{width:100%;max-width:900px;margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   button{
     font:inherit;font-weight:700;border:none;border-radius:8px;cursor:pointer;
@@ -334,6 +369,14 @@
   <div id="score"></div>
 </div>
 
+<div class="beatpop" id="beatPop" role="dialog" aria-label="replace this beat" hidden>
+  <div class="bpcaret" id="bpCaret"></div>
+  <div class="bphead">
+    <button type="button" class="bpclose" id="bpClose" aria-label="close">×</button>
+  </div>
+  <div class="bpbody" id="bpBody"></div>
+</div>
+
 <div class="deck">
   <div class="dialcol">
     <div class="dial" id="dial">
@@ -497,6 +540,13 @@ const GROUPS = [
 const ALL_CELLS = GROUPS.flatMap(g=>g.cells);
 /* used to fill a beat when the current selection cannot fill one */
 const FILL = {id:'_fill', w:1, beats:1, ev:[{d:1,g:'q'}]};
+/* a rhythm carries the ids of the cells it was built from, so the beat editor
+   can put a different one in their place */
+const CELL_BY_ID = Object.fromEntries([...ALL_CELLS, FILL].map(c=>[c.id,c]));
+function cellById(id){ return CELL_BY_ID[id] || FILL; }
+/* the only human-readable name a figure has, which is what the beat editor
+   labels its options with now that it does not show the groups */
+const GROUP_OF = Object.fromEntries(GROUPS.flatMap(g=>g.cells.map(c=>[c.id, g.name])));
 
 /* Each figure is off, on, or guaranteed ('must'); the guaranteed ones are also
    part of the ordinary pool, they just get a reserved slot in every measure. */
@@ -583,11 +633,51 @@ function genRhythm(measures, bpb, cells, must=[]){
     if(got===must.length){ bars=tryBars; break; }
     if(got>bestGot){ bestGot=got; bars=tryBars; }
   }
+  const list=[];
+  bars.forEach((bar,mi)=>bar.forEach(p=>list.push({id:p.cell.id, start:mi*bpb+p.start})));
+  return rhythmFromCells(measures, bpb, list);
+}
+/* The one way a rhythm is built: a list of `{id, start}` cells, flattened into
+   the events everything downstream reads. The cell list rides along on the
+   rhythm so a single beat of it can be swapped out later. */
+function rhythmFromCells(measures, bpb, cells){
+  const list=cells.slice().sort((a,b)=>a.start-b.start);
   const events=[];
-  bars.forEach((bar,mi)=>bar.forEach(p=>{
-    events.push(...cellEvents(p.cell, mi*bpb+p.start, mi+'-'+p.start));
-  }));
-  return {measures, bpb, events, onsets:events.filter(e=>!e.rest).map(e=>e.t)};
+  list.forEach(c=>events.push(...cellEvents(cellById(c.id), c.start, 'c'+c.start)));
+  return {measures, bpb, cells:list, events, onsets:events.filter(e=>!e.rest).map(e=>e.t)};
+}
+/* Bars saved before the editor existed kept only their events, so the cells are
+   read back off them; a bar whose events match no figure simply cannot be
+   edited, and `rhythmCells` returning null is how the rest of the code hears it. */
+function matchCell(c, evs, i, start){
+  if(i+c.ev.length>evs.length) return false;
+  let t=start;
+  for(let k=0;k<c.ev.length;k++){
+    const a=evs[i+k], e=c.ev[k];
+    if(Math.abs(a.t-t)>1e-6 || a.g!==e.g || !!a.rest!==!!e.rest) return false;
+    t+=e.d;
+  }
+  return true;
+}
+function cellsFromEvents(r){
+  const evs=r.events.slice().sort((a,b)=>a.t-b.t);
+  // longest first, so a figure is never mistaken for the opening of a longer one
+  const pool=[...ALL_CELLS].sort((a,b)=>b.ev.length-a.ev.length);
+  const out=[]; let i=0;
+  while(i<evs.length){
+    const start=evs[i].t;
+    if(start%1!==0) return null;
+    const m=pool.find(c=>matchCell(c, evs, i, start));
+    if(!m) return null;
+    out.push({id:m.id, start});
+    i+=m.ev.length;
+  }
+  return out;
+}
+function rhythmCells(r){
+  if(!r) return null;
+  if(!r.cells) r.cells=cellsFromEvents(r);
+  return r.cells;
 }
 
 /* ---------- notation rendering (SVG) ---------- */
@@ -632,6 +722,7 @@ function renderRhythm(r){
   setLayout(r.bpb, r.measures);
   document.getElementById('score').innerHTML = staffSvg(r, {live:true});
   syncFav();
+  markEditedBeat();
 }
 /* Builds the staff for a rhythm under the layout already set. `live` adds the
    playhead and the marker layer, which only the staff itself wants; `trim`
@@ -662,10 +753,28 @@ function staffSvg(r, {live=false, trim=false}={}){
   s+=drawEvents(r.events, xOf, yOf);
   if(live){
     s+=`<line id="playhead" x1="-10" y1="${Y-56}" x2="-10" y2="${Y+22}" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
-    s+=`<g id="markers"></g>`;
+    s+=`<g id="markers" pointer-events="none"></g>`;
+    s+=beatHits(r);
   }
   const y0 = trim ? Y-62 : 0;      // nothing is drawn above a tuplet's number
   return `<svg viewBox="0 ${y0} ${W} ${H-y0}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+}
+/* One target per quarter pulse, laid over the notation so a tap anywhere in a
+   beat's column finds it — including on the notehead itself, which is why the
+   marker layer is inert. The last beat of a measure reaches its barline, so the
+   air xOf leaves in front of it is not a dead strip. */
+function beatHits(r){
+  const bw=(MW-MPAD)/LB;
+  // one shape for the figure being edited, so a two-beat figure is tinted as a
+  // whole rather than as two boxes with a seam down the middle
+  let s='<g id="hits"><rect id="editsel" rx="7" fill="var(--brass)" fill-opacity=".17" opacity="0" pointer-events="none"/>';
+  for(let b=0; b<r.measures*r.bpb; b++){
+    const x=xOf(b)-14, y=yOf(b);
+    const last=(b+1)%r.bpb===0;
+    const w=last ? Math.max(bw, measureEnd(b)-2-x) : bw;
+    s+=`<rect class="beathit" data-beat="${b}" x="${x}" y="${y-60}" width="${w}" height="86" rx="6"/>`;
+  }
+  return s+'</g>';
 }
 /* Draws beams, brackets, noteheads and rests for a list of events.
    `xf` maps a beat position to x and `yf` maps it to its staff line, since the
@@ -989,6 +1098,7 @@ function bump(refresh){
 }
 function startRun(fresh){
   stopAll(false);
+  closeEditor();
   if(fresh || !state.rhythm) state.rhythm=makeRhythm();
   renderRhythm(state.rhythm);
   const c=audio(); c.resume();
@@ -1025,7 +1135,10 @@ function loop(){
   } else {
     if(scoringOn()){ markMisses(Infinity); summarize(); }
     if(state.pending){
-      if(state.pending.rhythm!==state.rhythm) state.prev=state.rhythm;
+      if(state.pending.rhythm!==state.rhythm){
+        state.prev=state.rhythm;
+        closeEditor();                       // it was pointing at the bar just gone
+      }
       state.rhythm=state.pending.rhythm;
       state.cycle=state.pending.cycle;
       state.pending=null;
@@ -1188,6 +1301,136 @@ function retryRun(){
   startRun(false);
 }
 
+/* ---------- beat editor ---------- */
+/* Tapping a quarter pulse on the staff opens a popover of every figure that
+   could stand in its place, and picking one swaps it in under the music. The
+   popover stays open so the alternatives can be tried against each other. */
+let edit=null;                                   // {start, span} while it is open
+/* The figure covering a beat is what a tap on that beat is asking about, so a
+   tap anywhere inside a half note edits the half note. */
+function cellAt(r, beat){
+  const list=rhythmCells(r);
+  if(!list) return null;
+  return list.find(c => beat>=c.start && beat < c.start+cellById(c.id).beats) || null;
+}
+/* What may go in a slot has only to fit inside the measure. The generator also
+   insists a figure start where its own length divides the beat, which is what
+   keeps a random bar readable; the editor does not, because the user is placing
+   this one deliberately and a half note across beats 2 and 3 is a thing you may
+   well want to read. There are no ties, so such a figure is drawn plainly where
+   it was put rather than as the tied pair an engraver would write. */
+function fitsAt(c, room){ return c.beats<=room; }
+function openEditor(beat, anchor){
+  const r=state.rhythm, cur=cellAt(r, beat);
+  if(!cur) return;                               // a bar we cannot read back
+  if(edit && edit.start===cur.start){ closeEditor(); return; }   // tapping it again
+  const bpb=r.bpb, mi=Math.floor(cur.start/bpb);
+  const pos=cur.start-mi*bpb, room=bpb-pos;
+  edit={start:cur.start, span:cellById(cur.id).beats};
+  $('bpBody').innerHTML='<div class="bpgrid">'+
+    ALL_CELLS.filter(c=>fitsAt(c, room)).map(c=>
+      `<button type="button" class="bpopt" data-id="${c.id}"`+
+      ` aria-pressed="${c.id===cur.id}" aria-label="${GROUP_OF[c.id]}">${cellPreview(c)}</button>`
+    ).join('')+'</div>';
+  $('beatPop').hidden=false;
+  placeEditor(anchor);
+  markEditedBeat();
+  const on=$('bpBody').querySelector('[aria-pressed=true]');
+  if(on) on.scrollIntoView({block:'nearest'});
+}
+/* Fixed to the viewport rather than the card, so a popover near the bottom of a
+   phone is never clipped by anything it hangs out of; the caret is what keeps
+   it tied to the beat once it has been nudged back inside the screen. */
+function placeEditor(anchor){
+  const p=$('beatPop');
+  p.classList.remove('above');
+  const w=p.offsetWidth, h=p.offsetHeight, cx=anchor.left+anchor.width/2;
+  const left=Math.max(8, Math.min(cx-w/2, innerWidth-w-8));
+  let top=anchor.bottom+11;
+  if(top+h>innerHeight-8 && anchor.top-11-h>8){ top=anchor.top-11-h; p.classList.add('above'); }
+  top=Math.max(8, Math.min(top, innerHeight-h-8));
+  p.style.left=left+'px'; p.style.top=top+'px';
+  $('bpCaret').style.left=Math.max(12, Math.min(cx-left-6, w-24))+'px';
+}
+function closeEditor(){
+  if(!edit) return;
+  edit=null;
+  $('beatPop').hidden=true;
+  markEditedBeat();
+}
+/* The whole figure under the popover is tinted, not just the beat that was
+   tapped, since a tap inside a two-beat figure is editing both of its beats.
+   Rendering replaces the SVG, so the tint is put back on every render rather
+   than held on an element reference. */
+function markEditedBeat(){
+  const sel=$('score').querySelector('#editsel');
+  if(!sel) return;
+  const hits = edit ? [...$('score').querySelectorAll('.beathit')]
+                        .filter(h=>{ const b=+h.dataset.beat;
+                                     return b>=edit.start && b<edit.start+edit.span; })
+                    : [];
+  if(!hits.length){ sel.setAttribute('opacity','0'); return; }
+  // a figure never crosses a barline, so its beats are always on one row
+  const a=hits[0], z=hits[hits.length-1];
+  const at=n=>+z.getAttribute(n);
+  sel.setAttribute('x', a.getAttribute('x'));
+  sel.setAttribute('y', a.getAttribute('y'));
+  sel.setAttribute('width', at('x')+at('width')-(+a.getAttribute('x')));
+  sel.setAttribute('height', a.getAttribute('height'));
+  sel.setAttribute('opacity','1');
+}
+/* Everything the new cell overlaps comes out, and whatever that leaves empty
+   becomes quarter rests, so the bar is always full however the lengths worked
+   out and the beats you did not ask for stay silent. */
+function replaceCell(r, start, id){
+  const bpb=r.bpb, nc=cellById(id), mi=Math.floor(start/bpb), pos=start-mi*bpb;
+  const list=rhythmCells(r);
+  if(!list || !fitsAt(nc, bpb-pos)) return null;
+  const kept=list.filter(c => c.start+cellById(c.id).beats<=start || c.start>=start+nc.beats);
+  kept.push({id, start});
+  const taken=new Set();
+  kept.forEach(c=>{ for(let b=c.start; b<c.start+cellById(c.id).beats; b++) taken.add(b); });
+  for(let b=0; b<r.measures*bpb; b++) if(!taken.has(b)) kept.push({id:'qr', start:b});
+  return rhythmFromCells(r.measures, bpb, kept);
+}
+/* A bar you have edited is one you meant to keep, so the loop goes on the way
+   it does for Retry and for a saved bar; without it the next Start would deal a
+   fresh bar over the top of the edit. */
+function applyEdit(id){
+  if(!edit) return;
+  const nr=replaceCell(state.rhythm, edit.start, id);
+  if(!nr) return;
+  closeEditor();
+  state.rhythm=nr; state.prev=null;
+  if(!$('replay').checked){ $('replay').checked=true; syncLoop(); }
+  saveSettings();
+  renderRhythm(nr);
+  $('result').innerHTML='';
+  if(state.cycle && ctx){
+    // the bar playing is this bar, so the schedule has to be laid down again
+    state.cycle.rhythm=nr;
+    clearTimeout(bumpT); bumpRefresh=false;
+    reschedule(false);
+    prepareExpected();
+  }
+}
+$('score').addEventListener('click',e=>{
+  const h=e.target.closest('.beathit');
+  if(h) openEditor(+h.dataset.beat, h.getBoundingClientRect());
+});
+$('bpBody').addEventListener('click',e=>{
+  const b=e.target.closest('.bpopt');
+  if(b) applyEdit(b.dataset.id);
+});
+$('bpClose').addEventListener('click',closeEditor);
+document.addEventListener('pointerdown',e=>{
+  if(!edit || $('beatPop').contains(e.target) || e.target.closest('.beathit')) return;
+  closeEditor();
+});
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeEditor(); });
+// it is anchored to a beat that has just moved on the screen
+window.addEventListener('scroll',closeEditor, {passive:true});
+
 /* ---------- saved bars ---------- */
 /* A saved bar is the rhythm exactly as it was generated, plus the tempo it was
    read at. It lives in its own storage key rather than in the settings, since
@@ -1269,6 +1512,7 @@ function toggleFav(){
    fresh bar over the one just loaded. */
 function loadFav(i){
   const f=favs[i]; if(!f) return;
+  closeEditor();
   const r=JSON.parse(JSON.stringify(f.rhythm));
   $('measures').value=r.measures;
   if([...$('timesig').options].some(o=>+o.value===r.bpb)) $('timesig').value=r.bpb;
@@ -1496,6 +1740,7 @@ $('loopBtn').addEventListener('click',()=>{
 const GEN_IDS=['measures','timesig'];
 function previewIdle(){
   if(state.cycle) return;
+  closeEditor();
   state.rhythm=makeRhythm(); state.prev=null;
   renderRhythm(state.rhythm);
   $('result').innerHTML='';
@@ -1513,6 +1758,7 @@ document.querySelectorAll('details[id]').forEach(d=>d.addEventListener('toggle',
    that changes how much width the staff has — the window, or the sidebar
    taking its share of it — has to look again. */
 function relayout(){
+  closeEditor();                             // the beat it points at has moved
   if(!state.rhythm) return;
   const was=PERROW;
   setLayout(state.rhythm.bpb, state.rhythm.measures);

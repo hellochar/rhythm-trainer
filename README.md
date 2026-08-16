@@ -21,6 +21,16 @@ The word above the staff tells you which pass you are in. At rest it says nothin
 
 **Retry ↺** puts the bar you just missed back in front of you and loops it until you switch it off. It picks the bar you last played, or the one you are playing now if you are more than halfway through your own pass, so you can reach for it the moment a bar goes wrong without having to catch it in time. It also switches on the loop button in the top-right corner of the staff; press that again to go back to fresh rhythms.
 
+## Changing a beat
+
+Tap any beat of the bar on the staff and a picker opens under it, a grid of every figure that could go there. Tap one and it takes that beat's place immediately, notation and sound both, and the picker closes.
+
+A tap means the figure covering that beat, so tapping either half of a two-beat figure offers a replacement for the whole of it, and the beats it occupies are shaded while the picker is open. What you are offered is everything that fits in what is left of the measure, so beat 1 of 4/4 can take a whole note, beat 2 anything up to three beats, and the last beat only the one-beat figures. Every figure in the library is offered, whether or not it is selected in the **Rhythm figures** panel — that panel is for what gets generated, and this is you choosing directly.
+
+The generator will only start a figure where its length divides the beat, which is what keeps a bar it deals you readable, but placing one by hand is not held to that: you can put a half note on beat 2, or a quarter triplet across beats 2 and 3. There are no ties in the notation, so a figure like that is drawn plainly where you put it rather than as the tied pair an engraver would write. Swapping a long figure for a short one leaves the beats it gives up as quarter rests, and swapping a short one for a long one takes over the beats it needs.
+
+Editing a bar switches the loop button on, the way Retry and loading a saved bar do, so the bar you have just built stays in front of you rather than being replaced on the next start. Edit during a run and the music follows within the bar. The picker closes when the bar underneath it changes for any other reason, and Escape or a tap outside closes it too.
+
 ## Saved bars
 
 The **☆** in the top-left corner of the staff keeps the bar in front of you, along with the tempo you were reading it at. The star fills in once a bar is saved, and tapping it again drops that bar, so it tells you at a glance whether what you are looking at is one you already kept.
