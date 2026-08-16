@@ -1313,9 +1313,13 @@ function cellAt(r, beat){
   if(!list) return null;
   return list.find(c => beat>=c.start && beat < c.start+cellById(c.id).beats) || null;
 }
-/* What may go in a slot is what the generator itself would allow there: it has
-   to fit inside the measure and start where its own length divides the beat. */
-function fitsAt(c, pos, room){ return c.beats<=room && pos%c.beats===0; }
+/* What may go in a slot has only to fit inside the measure. The generator also
+   insists a figure start where its own length divides the beat, which is what
+   keeps a random bar readable; the editor does not, because the user is placing
+   this one deliberately and a half note across beats 2 and 3 is a thing you may
+   well want to read. There are no ties, so such a figure is drawn plainly where
+   it was put rather than as the tied pair an engraver would write. */
+function fitsAt(c, room){ return c.beats<=room; }
 function openEditor(beat, anchor){
   const r=state.rhythm, cur=cellAt(r, beat);
   if(!cur) return;                               // a bar we cannot read back
@@ -1324,7 +1328,7 @@ function openEditor(beat, anchor){
   const pos=cur.start-mi*bpb, room=bpb-pos;
   edit={start:cur.start, span:cellById(cur.id).beats};
   $('bpBody').innerHTML='<div class="bpgrid">'+
-    ALL_CELLS.filter(c=>fitsAt(c, pos, room)).map(c=>
+    ALL_CELLS.filter(c=>fitsAt(c, room)).map(c=>
       `<button type="button" class="bpopt" data-id="${c.id}"`+
       ` aria-pressed="${c.id===cur.id}" aria-label="${GROUP_OF[c.id]}">${cellPreview(c)}</button>`
     ).join('')+'</div>';
@@ -1381,7 +1385,7 @@ function markEditedBeat(){
 function replaceCell(r, start, id){
   const bpb=r.bpb, nc=cellById(id), mi=Math.floor(start/bpb), pos=start-mi*bpb;
   const list=rhythmCells(r);
-  if(!list || !fitsAt(nc, pos, bpb-pos)) return null;
+  if(!list || !fitsAt(nc, bpb-pos)) return null;
   const kept=list.filter(c => c.start+cellById(c.id).beats<=start || c.start>=start+nc.beats);
   kept.push({id, start});
   const taken=new Set();
