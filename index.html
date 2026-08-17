@@ -22,9 +22,16 @@
     --sw:340px;                 /* width of the saved-bars sidebar */
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
+  html{height:100%}
+  /* The gradient is fixed to the viewport rather than to the body box: the page
+     is taller than one screen, and a scrolling gradient would run out at 100vh
+     and start again, which reads as a seam across the middle of the page. */
   body{
-    background:radial-gradient(1200px 700px at 50% -10%, #fdfbf4 0%, var(--stage) 45%, var(--stage-2) 100%);
+    min-height:100%;
+    background-color:var(--stage-2);
+    background-image:radial-gradient(1200px 700px at 50% -10%, #fdfbf4 0%, var(--stage) 45%, var(--stage-2) 100%);
+    background-attachment:fixed;
+    background-repeat:no-repeat;
     color:var(--text);
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     display:flex;flex-direction:column;align-items:center;
@@ -54,12 +61,20 @@
   .stat.count span{display:inline-block;animation:countflash .6s ease-out forwards}
   @keyframes countflash{0%{opacity:1;transform:scale(1.35)}40%{opacity:.95;transform:scale(1)}100%{opacity:.18;transform:scale(1)}}
   .loopbtn{
-    position:absolute;right:0;top:0;width:30px;height:30px;padding:0;
+    position:absolute;right:0;top:0;height:30px;padding:0;min-width:30px;
     background:none;border:1px solid transparent;border-radius:8px;color:#00000050;
-    display:flex;align-items:center;justify-content:center;
+    display:flex;align-items:center;justify-content:center;gap:5px;
+    font-size:13px;font-weight:600;letter-spacing:.02em;
   }
   .loopbtn svg{width:19px;height:19px}
   .loopbtn:hover{filter:none;color:var(--ink)}
+  /* the word only where there is room for it */
+  .loopbtn span{display:none}
+  @media (min-width:620px){
+    .loopbtn{padding:0 9px 0 7px}
+    .loopbtn span{display:inline}
+    .stat{left:96px;right:96px}
+  }
   .loopbtn[aria-pressed=true]{color:var(--teal);background:#2d8b7a1c;border-color:#2d8b7a55}
   .favbtn{
     position:absolute;left:0;top:0;width:30px;height:30px;padding:0;
@@ -125,25 +140,64 @@
      the page gives up the width and nothing is covered, so there is no scrim.
      DOCK_W in the script has to agree with this. */
   @media (min-width:1240px){
+    /* where it sits beside the page there is room for it to be wider, and for
+       the notation on each card to be drawn bigger */
+    :root{--sw:442px}
     body.favopen{padding-right:var(--sw)}
     .scrim{display:none}
   }
   .favlist{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
-  .favcard{position:relative;border:1px solid #00000026;border-radius:10px;background:#ffffff5c;padding:3px}
+  .favcard{
+    position:relative;border:1px solid #00000026;border-radius:10px;
+    background:#ffffff5c;padding:3px;transition:transform .12s ease;
+  }
+  .favcard.dragging{transition:none;z-index:2;box-shadow:0 8px 20px #00000026;cursor:grabbing}
+  .favtop{display:flex;align-items:center;gap:6px;padding:1px 2px 0}
+  .favgrip{
+    padding:2px 4px;font-size:13px;line-height:1.1;font-weight:400;letter-spacing:-1px;
+    background:none;border:none;color:#00000045;cursor:grab;touch-action:none;
+  }
+  .favgrip:hover{filter:none;color:var(--ink)}
+  .favwhen{
+    flex:1 1 auto;min-width:0;font-family:ui-monospace,Menlo,monospace;
+    font-size:11.5px;letter-spacing:.02em;color:var(--text-dim);
+  }
   .favload{
-    display:block;width:100%;padding:2px 4px 3px;text-align:left;
+    display:block;width:100%;padding:0 2px 2px;text-align:left;
     font:inherit;font-weight:400;background:none;color:var(--text-dim);border-radius:8px;
   }
   .favload:hover{filter:none;background:#00000008}
   /* one fixed box for every thumbnail, whatever the meter: the notation scales
      to fit inside it, so a row of cards lines up instead of stepping */
-  .favload svg{display:block;width:100%;height:66px}
-  .favmeta{font-family:ui-monospace,Menlo,monospace;font-size:12px;letter-spacing:.04em}
+  .favload svg{display:block;width:100%;height:96px}
+  /* where the sidebar sits beside the page it is wider, so the notation on a
+     card can be drawn bigger too */
+  @media (min-width:1240px){ .favload svg{height:124px} }
   .favdel{
-    position:absolute;right:5px;bottom:5px;padding:1px 8px;font-size:13px;line-height:1.4;
+    flex:none;padding:1px 8px;font-size:13px;line-height:1.4;
     font-weight:400;background:#0000000d;color:#00000099;border:1px solid #00000026;border-radius:6px;
   }
+  /* the first tap asks, the second removes */
+  .favdel.ask{
+    background:color-mix(in srgb,var(--bad) 16%,transparent);
+    color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent);font-weight:600;
+  }
   .favempty{margin-top:12px;font-size:13px;line-height:1.5;color:var(--text-dim)}
+
+  /* ----- toast: what just happened, and how to take it back ----- */
+  .toast{
+    position:fixed;left:50%;bottom:18px;z-index:20;
+    display:flex;align-items:center;gap:10px;max-width:min(420px,92vw);
+    padding:9px 10px 9px 14px;border-radius:11px;font-size:13px;
+    background:var(--ink);color:var(--paper);box-shadow:0 8px 22px #00000030;
+    opacity:0;transform:translateX(-50%) translateY(10px);pointer-events:none;
+    transition:opacity .16s ease, transform .16s ease;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%);pointer-events:auto}
+  .toast button{
+    flex:none;font:inherit;font-size:13px;font-weight:700;
+    padding:4px 11px;border-radius:7px;background:var(--brass);color:#1a1408;
+  }
 
   /* ----- editing a beat: a target over every pulse, and the picker ----- */
   .beathit{fill:var(--brass);fill-opacity:0;pointer-events:all;cursor:pointer;transition:fill-opacity .1s ease}
@@ -176,6 +230,28 @@
   .bpopt svg{display:block;height:36px;width:auto;max-width:100%}
   .bpopt:hover{filter:none;background:#0000001c}
   .bpopt[aria-pressed=true]{
+    background:color-mix(in srgb,var(--brass) 22%,transparent);
+    border-color:color-mix(in srgb,var(--brass) 55%,transparent);
+  }
+
+  /* ----- the meter, tapped on the staff ----- */
+  .sighit{fill:var(--brass);fill-opacity:0;pointer-events:all;cursor:pointer;transition:fill-opacity .1s ease}
+  .sighit:hover{fill-opacity:.12}
+  /* until it has been tapped once, a dot beside the signature says it can be */
+  .taphint{fill:var(--brass);pointer-events:none;transform-origin:center;transform-box:fill-box;
+           animation:taphint 1.9s ease-in-out infinite}
+  @keyframes taphint{
+    0%,100%{opacity:.35;transform:scale(.7)}
+    45%{opacity:1;transform:scale(1.25)}
+  }
+  .sigpop{width:auto;padding:7px}
+  .sigrow{display:flex;gap:5px}
+  .sigopt{
+    padding:6px 9px;font:inherit;font-size:14px;font-weight:700;line-height:1.2;
+    background:#00000010;color:var(--text);border:1px solid #00000033;border-radius:8px;
+  }
+  .sigopt:hover{filter:none;background:#0000001c}
+  .sigopt[aria-pressed=true]{
     background:color-mix(in srgb,var(--brass) 22%,transparent);
     border-color:color-mix(in srgb,var(--brass) 55%,transparent);
   }
@@ -254,6 +330,24 @@
     touch-action:none;user-select:none;cursor:ew-resize;
   }
   .dial svg{display:block;width:100%;height:100%}
+  /* The knurled ring turns with the tempo, so a drag moves the wheel under your
+     finger by exactly as far as you turned it. It lights up while you have hold
+     of it, and on hover where there is a pointer that can hover. */
+  .dial .knurls{transition:transform .12s ease}
+  .dial.turning .knurls{transition:none}
+  .dial .dialring{transition:stroke .14s ease, filter .14s ease}
+  @media (hover:hover){
+    .dial:hover .dialring{
+      stroke:color-mix(in srgb,var(--brass) 60%,transparent);
+      filter:drop-shadow(0 0 5px color-mix(in srgb,var(--brass) 45%,transparent));
+    }
+    .dial:hover .knurls rect{fill:#00000036}
+  }
+  .dial.turning .dialring{
+    stroke:var(--brass);
+    filter:drop-shadow(0 0 9px color-mix(in srgb,var(--brass) 75%,transparent));
+  }
+  .dial.turning .knurls rect{fill:#00000045}
   /* the reading is a real input so it can be typed into where there is a keyboard */
   .dial .bpmnum{
     position:absolute;left:14%;right:14%;top:16%;height:28px;
@@ -295,7 +389,8 @@
   }
   .sicon svg{width:24px;height:24px;display:block}
   .sicon .slash{opacity:0;transition:opacity .1s ease}
-  .slabel{display:none;font-size:13px;color:var(--text-dim)}
+  /* right-aligned, so the labels end where the sliders begin */
+  .slabel{display:none;font-size:13px;color:var(--text-dim);text-align:right}
   .srow.muted .sicon{background:none;color:var(--text-dim)}
   .srow.muted .sicon .slash{opacity:1}
   .srow.muted input[type=range],.srow.muted .vol,.srow.muted .slabel{opacity:.4}
@@ -408,7 +503,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">
         <path d="M3 10V9a4 4 0 0 1 4-4h11"/><path d="m15 2 3 3-3 3"/>
         <path d="M21 14v1a4 4 0 0 1-4 4H6"/><path d="m9 22-3-3 3-3"/>
-      </svg>
+      </svg><span>loop</span>
     </button>
   </div>
   <div id="score"></div>
@@ -420,6 +515,11 @@
     <button type="button" class="bpclose" id="bpClose" aria-label="close">×</button>
   </div>
   <div class="bpbody" id="bpBody"></div>
+</div>
+
+<div class="beatpop sigpop" id="sigPop" role="dialog" aria-label="time signature" hidden>
+  <div class="bpcaret" id="sigCaret"></div>
+  <div class="sigrow" id="sigRow"></div>
 </div>
 
 <div class="shscrim" id="shareScrim" hidden></div>
@@ -490,17 +590,19 @@
   <label class="field">Length
     <select id="measures"><option value="1">1 measure</option><option value="2">2 measures</option></select>
   </label>
-  <label class="field">Time
-    <select id="timesig">
-      <option value="2">2/4</option>
-      <option value="3">3/4</option>
-      <option value="4" selected>4/4</option>
-      <option value="5">5/4</option>
-      <option value="6">6/4</option>
-      <option value="7">7/4</option>
-    </select>
-  </label>
+  <!-- the meter is set by tapping the time signature on the staff; the select is
+       still what holds it, what persists, and what everything else reads -->
+  <select id="timesig" hidden>
+    <option value="2">2/4</option>
+    <option value="3">3/4</option>
+    <option value="4" selected>4/4</option>
+    <option value="5">5/4</option>
+    <option value="6">6/4</option>
+    <option value="7">7/4</option>
+  </select>
   <input type="checkbox" id="replay" hidden>
+  <!-- 1 once the time signature has been tapped, so the hint on it stops -->
+  <input type="hidden" id="sigSeen" value="">
   <label class="field"><input type="checkbox" id="showLine"> moving line</label>
   <label class="field"><input type="checkbox" id="echoSound"> cowbell on my pass</label>
   <!-- experimenting without tap scoring: uncommenting this brings back the tap
@@ -542,10 +644,15 @@
   </div>
   <div class="sidebody">
     <div class="favlist" id="favList"></div>
-    <div class="favempty" id="favEmpty">Nothing saved yet. Tap the ☆ above the staff to keep the bar in front of you, along with the tempo you were reading it at.</div>
+    <div class="favempty" id="favEmpty">No saved entries. Save a bar by pressing the star icon ☆.</div>
   </div>
 </aside>
 <input type="checkbox" id="favOpen" hidden>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span id="toastMsg"></span>
+  <button type="button" id="toastAct" hidden></button>
+</div>
 
 <script>
 "use strict";
@@ -836,7 +943,8 @@ function yPlay(beat){
 }
 function renderRhythm(r){
   setLayout(r.bpb, r.measures, r);
-  document.getElementById('score').innerHTML = staffSvg(r, {live:true});
+  document.getElementById('score').innerHTML =
+    staffSvg(r, {live:true, repeat:$('replay').checked});
   syncFav();
   markEditedBeat();
 }
@@ -854,8 +962,9 @@ function tempoMark(x, y, bpm){
    crops the empty air above and below the staff, for the saved-bar thumbnails
    and the shared picture; `tempo` writes that BPM over the opening, which the
    staff on the screen has no use for since the dial is under it — and would go
-   stale on it, since a tempo change does not re-render. */
-function staffSvg(r, {live=false, trim=false, tempo=0}={}){
+   stale on it, since a tempo change does not re-render. `repeat` closes the
+   last barline with a repeat sign, which is what the loop button means. */
+function staffSvg(r, {live=false, trim=false, tempo=0, repeat=false}={}){
   const rows=Math.ceil(r.measures/PERROW);
   const W = PADL*2 + SIGW + Math.min(r.measures,PERROW)*MW;
   const H = Y + (rows-1)*ROWH + 58;
@@ -868,6 +977,11 @@ function staffSvg(r, {live=false, trim=false, tempo=0}={}){
       const fin = row===rows-1 && ci===cols;
       s+=`<line x1="${bx}" y1="${y-30}" x2="${bx}" y2="${y+12}" stroke="var(--ink)" stroke-width="${fin?3:1.6}"/>`;
       if(fin) s+=`<line x1="${bx-5}" y1="${y-30}" x2="${bx-5}" y2="${y+12}" stroke="var(--ink)" stroke-width="1.4"/>`;
+      // a repeat sign rather than a plain double bar: the two dots straddle the
+      // line the notes sit on, since the staff is the one line
+      if(fin && repeat) [y-8, y+8].forEach(dy=>{
+        s+=`<circle cx="${bx-13}" cy="${dy}" r="2.7" fill="var(--ink)"/>`;
+      });
     }
     // time signature, numerals stacked over the opening of each row
     [[r.bpb, y-4],[4, y+17]].forEach(([n,ty])=>{
@@ -884,6 +998,7 @@ function staffSvg(r, {live=false, trim=false, tempo=0}={}){
     s+=`<line id="playhead" x1="-10" y1="${Y-56}" x2="-10" y2="${Y+22}" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
     s+=`<g id="markers" pointer-events="none"></g>`;
     s+=beatHits(r);
+    s+=sigHits(rows);
   }
   // nothing is drawn above a tuplet's number — or above the tempo mark's stem
   // where there is one — and nothing below the beat numbers either, since the
@@ -907,6 +1022,20 @@ function beatHits(r){
     s+=`<rect class="beathit" data-beat="${b}" x="${x}" y="${y-60}" width="${w}" height="86" rx="6"/>`;
   }
   return s+'</g>';
+}
+/* The meter is set by tapping the time signature itself, so every row's
+   signature carries a target of its own. Until it has been tapped for the first
+   time a pulsing dot beside it says that it can be; `#sigSeen` remembers, and
+   rides along in the saved settings like everything else. */
+function sigHits(rows){
+  const seen=!!$('sigSeen').value;
+  let s='';
+  for(let row=0; row<rows; row++){
+    const y=Y+row*ROWH;
+    s+=`<rect class="sighit" x="${PADL+1}" y="${y-30}" width="${SIGW-2}" height="46" rx="6"/>`;
+    if(!seen) s+=`<circle class="taphint" cx="${PADL+SIGW-3}" cy="${y-25}" r="3.6"/>`;
+  }
+  return s;
 }
 /* Draws beams, brackets, noteheads and rests for a list of events.
    `xf` maps a beat position to x and `yf` maps it to its staff line, since the
@@ -1493,18 +1622,9 @@ function openEditor(beat, anchor){
 }
 /* Fixed to the viewport rather than the card, so a popover near the bottom of a
    phone is never clipped by anything it hangs out of; the caret is what keeps
-   it tied to the beat once it has been nudged back inside the screen. */
-function placeEditor(anchor){
-  const p=$('beatPop');
-  p.classList.remove('above');
-  const w=p.offsetWidth, h=p.offsetHeight, cx=anchor.left+anchor.width/2;
-  const left=Math.max(8, Math.min(cx-w/2, innerWidth-w-8));
-  let top=anchor.bottom+11;
-  if(top+h>innerHeight-8 && anchor.top-11-h>8){ top=anchor.top-11-h; p.classList.add('above'); }
-  top=Math.max(8, Math.min(top, innerHeight-h-8));
-  p.style.left=left+'px'; p.style.top=top+'px';
-  $('bpCaret').style.left=Math.max(12, Math.min(cx-left-6, w-24))+'px';
-}
+   it tied to the beat once it has been nudged back inside the screen. The meter
+   picker is placed the same way, hence `placePop`. */
+function placeEditor(anchor){ placePop($('beatPop'), $('bpCaret'), anchor); }
 function closeEditor(){
   if(!edit) return;
   edit=null;
@@ -1585,6 +1705,80 @@ window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeEditor(); });
 // it is anchored to a beat that has just moved on the screen
 window.addEventListener('scroll',closeEditor, {passive:true});
 
+/* ---------- toast ---------- */
+/* What just happened, along the bottom, with the way to take it back where
+   there is one. One at a time: a second message replaces the first. */
+let toastT=0, toastRun=null;
+function toast(msg, label, run){
+  $('toastMsg').textContent=msg;
+  const b=$('toastAct');
+  b.hidden=!label;
+  if(label) b.textContent=label;
+  toastRun=run||null;
+  $('toast').classList.add('on');
+  clearTimeout(toastT);
+  toastT=setTimeout(hideToast, label?7000:2600);
+}
+function hideToast(){ clearTimeout(toastT); $('toast').classList.remove('on'); }
+$('toastAct').addEventListener('click',()=>{ const f=toastRun; hideToast(); if(f) f(); });
+
+/* ---------- the meter, tapped on the staff ---------- */
+/* The time signature on the staff is the control: tapping it opens the meters
+   beside it. `#timesig` is still where the meter lives, so persistence, the
+   generator and the saved bars are unchanged — this only drives it. */
+function closeSig(){ $('sigPop').hidden=true; }
+function sigIsOpen(){ return !$('sigPop').hidden; }
+function openSig(anchor){
+  if(sigIsOpen()){ closeSig(); return; }
+  const cur=$('timesig').value;
+  $('sigRow').innerHTML=[...$('timesig').options].map(o=>
+    `<button type="button" class="sigopt" data-v="${o.value}"`+
+    ` aria-pressed="${o.value===cur}">${o.text}</button>`).join('');
+  $('sigPop').hidden=false;
+  placePop($('sigPop'), $('sigCaret'), anchor);
+}
+/* the beat editor's placement, which the meter picker wants exactly: fixed to
+   the viewport so nothing clips it, with the caret keeping it tied to what it
+   came out of */
+function placePop(p, caret, anchor){
+  p.classList.remove('above');
+  const w=p.offsetWidth, h=p.offsetHeight, cx=anchor.left+anchor.width/2;
+  const left=Math.max(8, Math.min(cx-w/2, innerWidth-w-8));
+  let top=anchor.bottom+11;
+  if(top+h>innerHeight-8 && anchor.top-11-h>8){ top=anchor.top-11-h; p.classList.add('above'); }
+  top=Math.max(8, Math.min(top, innerHeight-h-8));
+  p.style.left=left+'px'; p.style.top=top+'px';
+  caret.style.left=Math.max(12, Math.min(cx-left-6, w-24))+'px';
+}
+function setMeter(v){
+  closeSig();
+  $('sigSeen').value='1';          // the hint has done its job
+  const changed = v!==$('timesig').value;
+  if(changed){
+    $('timesig').value=v;
+    previewIdle();                 // a new meter is a new bar, as the select was
+    bump(true);
+  }
+  saveSettings();
+  // previewIdle only draws when nothing is playing and the meter actually
+  // moved; the hint has to come off the staff either way
+  if(!changed || state.cycle) renderRhythm(state.rhythm);
+}
+$('score').addEventListener('click',e=>{
+  const h=e.target.closest('.sighit');
+  if(h) openSig(h.getBoundingClientRect());
+});
+$('sigRow').addEventListener('click',e=>{
+  const b=e.target.closest('.sigopt');
+  if(b) setMeter(b.dataset.v);
+});
+document.addEventListener('pointerdown',e=>{
+  if(!sigIsOpen() || $('sigPop').contains(e.target) || e.target.closest('.sighit')) return;
+  closeSig();
+});
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSig(); });
+window.addEventListener('scroll',closeSig,{passive:true});
+
 /* ---------- saved bars ---------- */
 /* A saved bar is the rhythm exactly as it was generated, plus the tempo it was
    read at. It lives in its own storage key rather than in the settings, since
@@ -1623,20 +1817,111 @@ function syncFav(){
   b.setAttribute('aria-pressed', on);
   b.title=t; b.setAttribute('aria-label', t);
 }
+/* when it was kept, in the reader's own locale; bars saved before this was
+   recorded simply have nothing to show */
+function favWhen(f){
+  if(!f.at) return '';
+  try{
+    return new Date(f.at).toLocaleString(undefined,
+      {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+  }catch(e){ return ''; }
+}
+/* The card carries the bar the way the shared picture draws it — the tempo as a
+   tempo mark over the staff, the meter as its own time signature — so there is
+   nothing left to write underneath it. What the notation cannot say is when you
+   kept it, and that goes in the strip along the top with the grip and the ×. */
 function buildFavs(){
+  clearAsk();
   $('favList').innerHTML = favs.map((f,i)=>
     `<div class="favcard">`+
+      `<div class="favtop">`+
+        `<button type="button" class="favgrip" aria-label="drag to reorder" title="drag to reorder">⠿</button>`+
+        `<span class="favwhen">${favWhen(f)}</span>`+
+        `<button type="button" class="favdel" data-i="${i}" title="remove this bar" aria-label="remove this bar">×</button>`+
+      `</div>`+
       `<button type="button" class="favload" data-i="${i}" title="load this bar at ${f.bpm} BPM">`+
-        barSvg(f.rhythm)+
-        `<span class="favmeta">${f.bpm} BPM · ${f.rhythm.bpb}/4`+
-          (f.rhythm.measures>1?` · ${f.rhythm.measures} bars`:'')+`</span>`+
+        barSvg(f.rhythm, {tempo:f.bpm})+
       `</button>`+
-      `<button type="button" class="favdel" data-i="${i}" title="remove this bar" aria-label="remove this bar">×</button>`+
     `</div>`).join('');
   $('favEmpty').style.display = favs.length ? 'none' : '';
   $('favCount').textContent = `${favs.length} saved`;
   $('favToggle').setAttribute('aria-label', `${favs.length} saved bars`);
 }
+/* ----- removing one: it asks first, and it can be taken back ----- */
+let askDel=-1, askT=0;
+function clearAsk(){
+  clearTimeout(askT); askDel=-1;
+  const b=$('favList').querySelector('.favdel.ask');
+  if(b){ b.classList.remove('ask'); b.textContent='×'; }
+}
+function askDelete(btn, i){
+  if(askDel===i){ clearAsk(); deleteFav(i); return; }
+  clearAsk();
+  askDel=i;
+  btn.classList.add('ask'); btn.textContent='remove?';
+  askT=setTimeout(clearAsk, 4500);
+}
+let undoFav=null;                      // {fav, i} until something else happens
+function deleteFav(i){
+  const f=favs[i]; if(!f) return;
+  favs.splice(i,1);
+  undoFav={fav:f, i};
+  saveFavs(); buildFavs(); syncFav();
+  toast('Bar removed.', 'Undo', undoDelete);
+}
+function undoDelete(){
+  if(!undoFav) return;
+  const u=undoFav; undoFav=null;
+  favs.splice(Math.min(u.i, favs.length), 0, u.fav);
+  if(favs.length>FAV_MAX) favs.length=FAV_MAX;
+  saveFavs(); buildFavs(); syncFav();
+  toast('Bar restored.');
+}
+window.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey) && !e.shiftKey && e.key.toLowerCase()==='z' && undoFav){
+    e.preventDefault(); undoDelete();
+  }
+});
+/* ----- reordering: carry a card by its grip ----- */
+/* Every card is the same height, since the thumbnail box is fixed, so the ones
+   it passes simply shift by one card and where it lands follows from how far it
+   has travelled. The list is rebuilt on release, which is also what clears the
+   transforms. */
+let drag=null, dragged=0;
+$('favList').addEventListener('pointerdown',e=>{
+  const g=e.target.closest('.favgrip'); if(!g) return;
+  const cards=[...$('favList').children], card=g.closest('.favcard'), i=cards.indexOf(card);
+  if(i<0 || cards.length<2) return;
+  e.preventDefault();
+  clearAsk();
+  const a=cards[0].getBoundingClientRect(), b=cards[1].getBoundingClientRect();
+  drag={i, to:i, y0:e.clientY, cards, card, step:(b.top-a.top)||card.offsetHeight};
+  card.classList.add('dragging');
+  try{ g.setPointerCapture(e.pointerId); }catch(err){}
+});
+$('favList').addEventListener('pointermove',e=>{
+  if(!drag) return;
+  const dy=e.clientY-drag.y0;
+  drag.card.style.transform=`translateY(${dy}px)`;
+  const to=Math.max(0, Math.min(drag.cards.length-1, drag.i+Math.round(dy/drag.step)));
+  if(to===drag.to) return;
+  drag.to=to;
+  drag.cards.forEach((c,k)=>{
+    if(c===drag.card) return;
+    const sh = (k>drag.i && k<=to) ? -drag.step : (k<drag.i && k>=to) ? drag.step : 0;
+    c.style.transform = sh ? `translateY(${sh}px)` : '';
+  });
+});
+['pointerup','pointercancel'].forEach(t=>$('favList').addEventListener(t,()=>{
+  if(!drag) return;
+  const {i,to}=drag; drag=null;
+  dragged=Date.now();                  // so the release does not also load a bar
+  if(to!==i){
+    favs.splice(to, 0, favs.splice(i,1)[0]);
+    saveFavs();
+  }
+  buildFavs();
+}));
 /* Where the window is wide enough the sidebar sits beside the content and the
    page simply gives up the width; anywhere narrower it lies over the page, so
    it takes a scrim and a tap outside closes it. DOCK_W has to agree with the
@@ -1658,7 +1943,9 @@ function toggleFav(){
   if(i>=0) favs.splice(i,1);
   else{
     const first=!favs.length;
-    favs.unshift({key:k, bpm:getTempo(), rhythm:JSON.parse(JSON.stringify(r))});
+    // wall-clock, and only ever shown as a date — the music is still timed on
+    // the audio clock and nothing here goes near it
+    favs.unshift({key:k, bpm:getTempo(), at:Date.now(), rhythm:JSON.parse(JSON.stringify(r))});
     if(favs.length>FAV_MAX) favs.length=FAV_MAX;
     if(first) setFavOpen(true);             // so the first one is seen landing
   }
@@ -1689,8 +1976,10 @@ $('favClose').addEventListener('click',()=>setFavOpen(false));
 $('favScrim').addEventListener('click',()=>setFavOpen(false));
 window.addEventListener('keydown',e=>{ if(e.key==='Escape' && favIsOpen()) setFavOpen(false); });
 $('favList').addEventListener('click',e=>{
+  if(Date.now()-dragged<300) return;            // that click was the end of a drag
   const d=e.target.closest('.favdel');
-  if(d){ favs.splice(+d.dataset.i,1); saveFavs(); buildFavs(); syncFav(); return; }
+  if(d){ askDelete(d, +d.dataset.i); return; }
+  clearAsk();
   const l=e.target.closest('.favload');
   if(l) loadFav(+l.dataset.i);
 });
@@ -1931,8 +2220,8 @@ function buildDial(){
   }
   $('dial').insertAdjacentHTML('afterbegin',
     `<svg viewBox="-100 -100 200 200" xmlns="http://www.w3.org/2000/svg">`+
-    `<circle r="97" fill="var(--stage-2)" stroke="#00000022" stroke-width="1"/>`+
-    `<g>${knurls}</g>`+
+    `<circle class="dialring" r="97" fill="var(--stage-2)" stroke="#00000022" stroke-width="1"/>`+
+    `<g class="knurls" id="dialKnurls">${knurls}</g>`+
     `<circle r="80" fill="var(--paper)" stroke="#0000001f" stroke-width="1"/>`+
     `<circle r="${DIAL_R}" fill="none" stroke="#00000012" stroke-width="5"/>`+
     `<circle id="dialArc" r="${DIAL_R}" fill="none" stroke="var(--teal)" stroke-width="5"`+
@@ -1953,6 +2242,12 @@ function updateDial(){
   const arc=$('dialArc');
   if(arc) arc.setAttribute('stroke-dasharray',
     `${(DIAL_C*DIAL_SWEEP*(v-lo)/(hi-lo)).toFixed(1)} ${Math.ceil(DIAL_C)}`);
+  /* The ring is turned by the tempo rather than by the drag, so it lands in the
+     same place however the tempo got there — typed, tapped, or loaded with a
+     saved bar. Since a degree of turn is BPM_PER_DEG of tempo, dividing by it
+     gives back exactly the degrees your finger travelled. */
+  const k=$('dialKnurls');
+  if(k) k.setAttribute('transform', `rotate(${((v-lo)/BPM_PER_DEG).toFixed(1)})`);
 }
 /* anything already playing follows the new tempo */
 function tempoChanged(){
@@ -2013,6 +2308,7 @@ $('dial').addEventListener('pointerdown',e=>{
   // a turn, so holding one to repeat is not stolen by a shaky finger
   turn={a:dialAngle(e), acc:0, travel:0, held:!!e.target.closest('.nudge'),
         onNum:e.target===$('tempo')};
+  $('dial').classList.add('turning');
   try{ $('dial').setPointerCapture(e.pointerId); }catch(err){}
 });
 $('dial').addEventListener('pointermove',e=>{
@@ -2032,6 +2328,7 @@ $('dial').addEventListener('pointermove',e=>{
    pointerup — the repeat has to be stopped from here */
 ['pointerup','pointercancel'].forEach(t=>$('dial').addEventListener(t,()=>{
   endNudge();
+  $('dial').classList.remove('turning');
   if(!turn) return;
   // pointerdown was swallowed to stop the drag selecting text, so a tap that
   // never became a turn has to hand the reading its focus by hand
@@ -2066,7 +2363,12 @@ $('goBtn').addEventListener('click',()=>{
 $('retryBtn').addEventListener('click',retryRun);
 /* replay lives on the loop button over the staff; the checkbox behind it is
    what persists, and Retry still reaches for it */
-function syncLoop(){ $('loopBtn').setAttribute('aria-pressed', $('replay').checked); }
+/* the staff closes on a repeat sign while the loop is on, so anything that
+   moves the checkbox has to come through here */
+function syncLoop(){
+  $('loopBtn').setAttribute('aria-pressed', $('replay').checked);
+  if(state.rhythm) renderRhythm(state.rhythm);
+}
 $('loopBtn').addEventListener('click',()=>{
   $('replay').checked=!$('replay').checked;
   syncLoop(); saveSettings();
