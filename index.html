@@ -45,7 +45,7 @@
      centred, loop at the right */
   .stage{position:relative;height:28px}
   .stat{
-    position:absolute;left:36px;right:36px;top:3px;height:22px;line-height:22px;
+    position:absolute;left:68px;right:68px;top:3px;height:22px;line-height:22px;
     text-align:center;pointer-events:none;
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
     font-size:12px;letter-spacing:.14em;color:var(--text-dim);
@@ -74,6 +74,13 @@
     border-color:color-mix(in srgb,var(--brass) 45%,transparent);
   }
   .favbtn[aria-pressed=true] svg{fill:var(--brass)}
+  .sharebtn{
+    position:absolute;left:32px;top:0;width:30px;height:30px;padding:0;
+    background:none;border:1px solid transparent;border-radius:8px;color:#00000050;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .sharebtn svg{width:19px;height:19px}
+  .sharebtn:hover{filter:none;color:var(--ink)}
 
   /* ----- saved bars: a toggle in the header, a sidebar behind it ----- */
   .favtoggle{
@@ -172,6 +179,35 @@
     background:color-mix(in srgb,var(--brass) 22%,transparent);
     border-color:color-mix(in srgb,var(--brass) 55%,transparent);
   }
+
+  /* ----- sharing: the link to a bar, and a picture of it ----- */
+  /* its own scrim rather than the sidebar's, which is hidden where that docks */
+  .shscrim{position:fixed;inset:0;z-index:13;background:#00000038}
+  .sharepop{
+    position:fixed;z-index:14;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(480px,92vw);max-height:88vh;overflow-y:auto;overscroll-behavior:contain;
+    background:var(--paper);border:1px solid var(--paper-edge);border-radius:12px;
+    box-shadow:0 12px 30px #00000026, inset 0 0 0 1px #ffffffcc;
+    padding:10px 14px 14px;
+  }
+  .sharehead{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700}
+  .sharefig{margin-top:9px;border:1px solid #00000026;border-radius:10px;background:#ffffff5c;padding:4px}
+  .sharefig img{display:block;width:100%;height:auto;border-radius:7px}
+  .sharerow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .sharerow input[type=text]{
+    flex:1 1 190px;min-width:0;
+    font:inherit;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;
+    background:#ffffffb3;color:var(--text);
+    border:1px solid #00000033;border-radius:6px;padding:7px 8px;
+  }
+  .sharepop button,.sharepop .sharedl{
+    font:inherit;font-size:13px;font-weight:400;padding:7px 12px;border-radius:8px;
+    background:#00000010;color:var(--text);border:1px solid #00000030;
+    text-decoration:none;display:inline-block;cursor:pointer;
+  }
+  .sharepop button:disabled{opacity:.45;cursor:default}
+  .sharepop .bpclose{padding:0 7px;font-size:16px;line-height:1.4;color:#00000099}
+  .sharenote{margin-top:10px;min-height:17px;font-size:12px;line-height:1.45;color:var(--text-dim)}
 
   .controls{width:100%;max-width:900px;margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   button{
@@ -361,6 +397,12 @@
         <path d="M12 3.2l2.7 5.6 6.1.85-4.45 4.3 1.07 6.05L12 17.15 6.58 20l1.07-6.05L3.2 9.65l6.1-.85z"/>
       </svg>
     </button>
+    <button type="button" class="sharebtn" id="shareBtn" aria-label="share this bar" title="share this bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+        <circle cx="18" cy="5.2" r="2.7"/><circle cx="6" cy="12" r="2.7"/><circle cx="18" cy="18.8" r="2.7"/>
+        <line x1="8.4" y1="10.7" x2="15.6" y2="6.5"/><line x1="8.4" y1="13.3" x2="15.6" y2="17.5"/>
+      </svg>
+    </button>
     <div class="stat" id="stat"></div>
     <button type="button" class="loopbtn" id="loopBtn" aria-pressed="false" aria-label="loop the same bar" title="loop the same bar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">
@@ -378,6 +420,24 @@
     <button type="button" class="bpclose" id="bpClose" aria-label="close">×</button>
   </div>
   <div class="bpbody" id="bpBody"></div>
+</div>
+
+<div class="shscrim" id="shareScrim" hidden></div>
+<div class="sharepop" id="sharePop" role="dialog" aria-label="share this bar" aria-modal="true" hidden>
+  <div class="sharehead">Share this bar
+    <button type="button" class="bpclose" id="shareClose" aria-label="close">×</button>
+  </div>
+  <div class="sharefig"><img id="shareImg" alt="this bar in notation"></div>
+  <div class="sharerow">
+    <input type="text" id="shareUrl" readonly spellcheck="false" aria-label="link to this bar">
+    <button type="button" id="shareCopy">copy link</button>
+  </div>
+  <div class="sharerow">
+    <button type="button" id="shareCopyImg">copy picture</button>
+    <a class="sharedl" id="shareDl" download="rhythm.png">save picture</a>
+    <button type="button" id="shareSys" hidden>share…</button>
+  </div>
+  <div class="sharenote" id="shareNote"></div>
 </div>
 
 <div class="deck">
@@ -780,10 +840,22 @@ function renderRhythm(r){
   syncFav();
   markEditedBeat();
 }
+/* The tempo the way it is written on paper: a quarter note, an equals sign and
+   the number, over the opening of the staff. Drawn with the same primitives as
+   a notehead, in the serif the time signature uses. */
+function tempoMark(x, y, bpm){
+  return `<ellipse cx="${x}" cy="${y}" rx="5.4" ry="4" transform="rotate(-18 ${x} ${y})" fill="var(--ink)"/>`+
+    `<line x1="${x+4.9}" y1="${y-1.2}" x2="${x+4.9}" y2="${y-20}" stroke="var(--ink)" stroke-width="1.8"/>`+
+    `<text x="${x+13}" y="${y+2}" font-size="16" font-weight="700" fill="var(--ink)"`+
+    ` font-family="Georgia,'Times New Roman',serif">= ${bpm}</text>`;
+}
 /* Builds the staff for a rhythm under the layout already set. `live` adds the
    playhead and the marker layer, which only the staff itself wants; `trim`
-   crops the empty air above the staff, for the saved-bar thumbnails. */
-function staffSvg(r, {live=false, trim=false}={}){
+   crops the empty air above and below the staff, for the saved-bar thumbnails
+   and the shared picture; `tempo` writes that BPM over the opening, which the
+   staff on the screen has no use for since the dial is under it — and would go
+   stale on it, since a tempo change does not re-render. */
+function staffSvg(r, {live=false, trim=false, tempo=0}={}){
   const rows=Math.ceil(r.measures/PERROW);
   const W = PADL*2 + SIGW + Math.min(r.measures,PERROW)*MW;
   const H = Y + (rows-1)*ROWH + 58;
@@ -806,14 +878,18 @@ function staffSvg(r, {live=false, trim=false}={}){
       s+=`<text x="${xOf(beat)}" y="${y+34}" font-size="11" fill="#00000045" text-anchor="middle" font-family="ui-monospace,monospace">${b+1}</text>`;
     }
   }
+  if(tempo) s+=tempoMark(PADL+7, Y-70, tempo);
   s+=drawEvents(r.events, xOf, yOf);
   if(live){
     s+=`<line id="playhead" x1="-10" y1="${Y-56}" x2="-10" y2="${Y+22}" stroke="var(--brass)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
     s+=`<g id="markers" pointer-events="none"></g>`;
     s+=beatHits(r);
   }
-  const y0 = trim ? Y-62 : 0;      // nothing is drawn above a tuplet's number
-  return `<svg viewBox="0 ${y0} ${W} ${H-y0}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
+  // nothing is drawn above a tuplet's number — or above the tempo mark's stem
+  // where there is one — and nothing below the beat numbers either, since the
+  // strip the scoring marks use is empty here
+  const y0 = trim ? Y-(tempo?94:62) : 0, y1 = trim ? H-14 : H;
+  return `<svg viewBox="0 ${y0} ${W} ${y1-y0}" xmlns="http://www.w3.org/2000/svg">${s}</svg>`;
 }
 /* One target per quarter pulse, laid over the notation so a tap anywhere in a
    beat's column finds it — including on the notehead itself, which is why the
@@ -1174,6 +1250,7 @@ function bump(refresh){
 function startRun(fresh){
   stopAll(false);
   closeEditor();
+  closeShare();                            // the link and the picture are of the bar going
   if(fresh || !state.rhythm) state.rhythm=makeRhythm();
   renderRhythm(state.rhythm);
   const c=audio(); c.resume();
@@ -1213,6 +1290,7 @@ function loop(){
       if(state.pending.rhythm!==state.rhythm){
         state.prev=state.rhythm;
         closeEditor();                       // it was pointing at the bar just gone
+        closeShare();                        // and so were the link and the picture
       }
       state.rhythm=state.pending.rhythm;
       state.cycle=state.pending.cycle;
@@ -1476,6 +1554,7 @@ function applyEdit(id){
   const nr=replaceCell(state.rhythm, edit.start, id);
   if(!nr) return;
   closeEditor();
+  closeShare();
   state.rhythm=nr; state.prev=null;
   if(!$('replay').checked){ $('replay').checked=true; syncLoop(); }
   saveSettings();
@@ -1524,14 +1603,17 @@ function loadFavs(){
   }catch(e){ favs=[]; }
 }
 function saveFavs(){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }catch(e){} }
-/* The thumbnails go through the same staff builder as the staff itself, so the
-   layout globals have to point at the saved bar while one is drawn. They are
-   only valid for the rhythm on the staff, so what was there is put back. */
-function favSvg(r){
+/* A bar drawn on its own — a saved-bar thumbnail, or the picture that goes with
+   a shared link — goes through the same staff builder as the staff itself, so
+   the layout globals have to point at that bar while it is drawn. They are only
+   valid for the rhythm on the staff, so what was there is put back. `stack`
+   leaves the stacking to the window the way the staff does; a thumbnail is
+   small already and always takes its measures on one row. */
+function barSvg(r, {stack=false, tempo=0}={}){
   const keep=[LB,MW,RM,PERROW];
   setLayout(r.bpb, r.measures, r);
-  PERROW=r.measures;                       // a thumbnail is small already; never stack it
-  const s=staffSvg(r, {trim:true});
+  if(!stack) PERROW=r.measures;
+  const s=staffSvg(r, {trim:true, tempo});
   LB=keep[0]; MW=keep[1]; RM=keep[2]; PERROW=keep[3];
   return s;
 }
@@ -1545,7 +1627,7 @@ function buildFavs(){
   $('favList').innerHTML = favs.map((f,i)=>
     `<div class="favcard">`+
       `<button type="button" class="favload" data-i="${i}" title="load this bar at ${f.bpm} BPM">`+
-        favSvg(f.rhythm)+
+        barSvg(f.rhythm)+
         `<span class="favmeta">${f.bpm} BPM · ${f.rhythm.bpb}/4`+
           (f.rhythm.measures>1?` · ${f.rhythm.measures} bars`:'')+`</span>`+
       `</button>`+
@@ -1588,6 +1670,7 @@ function toggleFav(){
 function loadFav(i){
   const f=favs[i]; if(!f) return;
   closeEditor();
+  closeShare();
   const r=JSON.parse(JSON.stringify(f.rhythm));
   $('measures').value=r.measures;
   if([...$('timesig').options].some(o=>+o.value===r.bpb)) $('timesig').value=r.bpb;
@@ -1610,6 +1693,197 @@ $('favList').addEventListener('click',e=>{
   if(d){ favs.splice(+d.dataset.i,1); saveFavs(); buildFavs(); syncFav(); return; }
   const l=e.target.closest('.favload');
   if(l) loadFav(+l.dataset.i);
+});
+
+/* ---------- sharing ---------- */
+/* A bar travels as a link that spells it out: the meter, the length, the tempo
+   and the figures in order. Every beat of a bar is covered by exactly one
+   figure and no figure crosses a barline, so the starts follow from the lengths
+   and only the ids have to travel — the ids the library is keyed by, which are
+   stable, unlike their position in it. That keeps the link short enough that
+   compressing it would only cost it the one thing it is good for: it can be
+   read, and edited, by hand. `?time=4&measures=1&bpm=90&bar=q.ee.h` is a bar. */
+function shareUrl(r){
+  const list=rhythmCells(r);
+  if(!list) return null;                   // a bar saved before the cells rode along
+  const u=new URL(location.href);
+  u.search=''; u.hash='';
+  u.searchParams.set('time', r.bpb);
+  u.searchParams.set('measures', r.measures);
+  u.searchParams.set('bpm', getTempo());
+  u.searchParams.set('bar', list.map(c=>c.id).join('.'));
+  return u.toString();
+}
+/* Read leniently, since a link may well have been typed: an unknown figure
+   becomes a quarter, one that would cross a barline or run past the end is
+   dropped, and whatever beats are left over fill with quarter rests. So
+   `?bar=ee` alone is an eighth pair and three beats of silence. */
+function rhythmFromParams(p){
+  const raw=p.get('bar');
+  if(!raw) return null;
+  const bpb=Math.max(2, Math.min(7, Math.round(+p.get('time')||4)));
+  const measures=Math.max(1, Math.min(2, Math.round(+p.get('measures')||1)));
+  const total=bpb*measures, list=[];
+  let pos=0;
+  raw.split(/[.,\s]+/).filter(Boolean).forEach(s=>{
+    const id = CELL_BY_ID[s] ? s : 'q';
+    const b = cellById(id).beats;
+    if(pos+b>total || (pos%bpb)+b>bpb) return;
+    list.push({id, start:pos});
+    pos+=b;
+  });
+  if(!list.length) return null;
+  for(let b=pos; b<total; b++) list.push({id:'qr', start:b});
+  return rhythmFromCells(measures, bpb, list);
+}
+/* A shared bar is the whole point of the link, so it is installed the way a
+   saved one is: the meter, the length and the tempo come with it, and the loop
+   goes on so the first Start does not deal a fresh bar over the top of it. The
+   parameters are left in the address bar, so the link still means that bar when
+   the page is opened again. */
+function sharedRhythm(){
+  let r=null;
+  try{ r=rhythmFromParams(new URL(location.href).searchParams); }catch(e){}
+  if(!r) return null;
+  $('measures').value=r.measures;
+  if([...$('timesig').options].some(o=>+o.value===r.bpb)) $('timesig').value=r.bpb;
+  const bpm=+((new URL(location.href)).searchParams.get('bpm'));
+  if(isFinite(bpm) && bpm) setTempo(bpm);
+  $('replay').checked=true; syncLoop();
+  saveSettings();
+  return r;
+}
+/* The picture is the staff itself, rasterised: the SVG goes onto a canvas at 2x
+   over the paper it sits on, so what lands in the clipboard looks like the card
+   rather than a transparent cut-out. It stacks its measures the way the staff
+   on the screen does, so what you send is what you were reading, and it carries
+   the tempo as a tempo mark, so nothing has to be written under it. A
+   standalone SVG has no :root to read the custom properties from, so they are
+   resolved into it first. */
+const SHARE_SCALE=2, SHARE_PAD=18;
+function inlineVars(svg){
+  const cs=getComputedStyle(document.documentElement);
+  return svg.replace(/var\((--[\w-]+)\)/g, (m,n)=>cs.getPropertyValue(n).trim()||'#000');
+}
+function shareImage(r){
+  const svg=inlineVars(barSvg(r, {stack:true, tempo:getTempo()}));
+  const vb=(/viewBox="([^"]+)"/.exec(svg)||[])[1];
+  if(!vb) return Promise.reject(new Error('no viewBox'));
+  const n=vb.trim().split(/\s+/).map(Number), vw=n[2], vh=n[3];
+  // Firefox will not draw an SVG image that has no intrinsic size
+  const sized=svg.replace('<svg ', `<svg width="${vw}" height="${vh}" `);
+  const w=Math.round(vw+SHARE_PAD*2), h=Math.round(vh+SHARE_PAD*2);
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const cv=document.createElement('canvas');
+        cv.width=w*SHARE_SCALE; cv.height=h*SHARE_SCALE;
+        const g=cv.getContext('2d');
+        g.scale(SHARE_SCALE, SHARE_SCALE);
+        const cs=getComputedStyle(document.documentElement);
+        g.fillStyle=cs.getPropertyValue('--paper').trim()||'#fff';
+        g.fillRect(0,0,w,h);
+        g.drawImage(img, SHARE_PAD, SHARE_PAD, vw, vh);
+        cv.toBlob(b=> b ? res(b) : rej(new Error('no blob')), 'image/png');
+      }catch(e){ rej(e); }
+    };
+    img.onerror=()=>rej(new Error('svg'));
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(sized);
+  });
+}
+let shareBlob=null, shareObj=null;
+function setShareNote(t){ $('shareNote').textContent=t; }
+/* The link is copied the moment the dialog opens, since that is what the button
+   is for; the button beside it is there for the second time. */
+function copyLink(){
+  const el=$('shareUrl');
+  try{ el.select(); el.setSelectionRange(0, 99999); }catch(e){}
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    return navigator.clipboard.writeText(el.value);
+  }
+  return new Promise((res,rej)=>{
+    let ok=false;
+    try{ ok=document.execCommand('copy'); }catch(e){}
+    ok ? res() : rej(new Error('copy'));
+  });
+}
+function buildShareImage(r){
+  const img=$('shareImg');
+  img.removeAttribute('src');
+  $('shareCopyImg').disabled=true;
+  $('shareDl').removeAttribute('href');
+  shareBlob=null;
+  shareImage(r).then(b=>{
+    shareBlob=b;
+    if(shareObj) URL.revokeObjectURL(shareObj);
+    shareObj=URL.createObjectURL(b);
+    img.src=shareObj;
+    $('shareDl').href=shareObj;
+    $('shareCopyImg').disabled=false;
+  }).catch(()=>{
+    setShareNote('The picture could not be drawn in this browser. The link still works.');
+  });
+}
+function shareIsOpen(){ return !$('sharePop').hidden; }
+function openShare(){
+  const r=state.rhythm;
+  if(!r) return;
+  closeEditor();
+  const url=shareUrl(r);
+  $('shareUrl').value=url||'';
+  $('shareUrl').disabled=!url;
+  $('shareCopy').disabled=!url;
+  $('shareSys').hidden=!navigator.share;
+  $('sharePop').hidden=false;
+  $('shareScrim').hidden=false;
+  buildShareImage(r);
+  if(!url){
+    setShareNote('This bar was saved before links existed, so only the picture can be shared.');
+    $('shareClose').focus();
+    return;
+  }
+  setShareNote('Link copied.');
+  // copying selects the field, which is also how the dialog takes the focus
+  copyLink().catch(()=>setShareNote('Copy the link from the field above.'));
+}
+function closeShare(){
+  if(!shareIsOpen()) return;
+  $('sharePop').hidden=true;
+  $('shareScrim').hidden=true;
+}
+$('shareBtn').addEventListener('click', openShare);
+$('shareClose').addEventListener('click', closeShare);
+$('shareScrim').addEventListener('click', closeShare);
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') closeShare(); });
+$('shareCopy').addEventListener('click',()=>{
+  copyLink().then(()=>setShareNote('Link copied.'))
+            .catch(()=>setShareNote('Copy the link from the field above.'));
+});
+$('shareCopyImg').addEventListener('click',()=>{
+  if(!shareBlob) return;
+  try{
+    navigator.clipboard.write([new ClipboardItem({'image/png':shareBlob})])
+      .then(()=>setShareNote('Picture copied.'))
+      .catch(()=>setShareNote('This browser would not take the picture. Save it, or press and hold it.'));
+  }catch(e){
+    setShareNote('This browser cannot copy pictures. Save it, or press and hold it.');
+  }
+});
+/* The system share sheet where there is one, which is how this reaches the
+   messaging apps on a phone. Not every target takes a file and a link together,
+   so the link rides along as text when the picture goes with it. */
+$('shareSys').addEventListener('click',()=>{
+  const url=$('shareUrl').value, data={title:'Rhythm Trainer'};
+  let file=null;
+  try{ if(shareBlob) file=new File([shareBlob],'rhythm.png',{type:'image/png'}); }catch(e){}
+  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+    data.files=[file];
+    if(url) data.text=url;
+  } else if(url){
+    data.url=url;
+  } else return;
+  navigator.share(data).catch(()=>{});
 });
 
 /* ---------- settings persistence ---------- */
@@ -1816,6 +2090,7 @@ const GEN_IDS=['measures','timesig'];
 function previewIdle(){
   if(state.cycle) return;
   closeEditor();
+  closeShare();
   state.rhythm=makeRhythm(); state.prev=null;
   renderRhythm(state.rhythm);
   $('result').innerHTML='';
@@ -1860,7 +2135,8 @@ updateScoringUI();
    overlay is not a welcome */
 setFavOpen($('favOpen').checked && docks());
 setStat('');
-state.rhythm=makeRhythm();
+/* a link to a bar beats the bar the settings would have produced */
+state.rhythm=sharedRhythm()||makeRhythm();
 renderRhythm(state.rhythm);
 </script>
 </body>
