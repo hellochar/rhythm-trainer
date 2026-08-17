@@ -394,9 +394,16 @@
   .srow.muted .sicon{background:none;color:var(--text-dim)}
   .srow.muted .sicon .slash{opacity:1}
   .srow.muted input[type=range],.srow.muted .vol,.srow.muted .slabel{opacity:.4}
+  /* Wide enough for labels: the name comes first and the icon moves in beside
+     the slider it belongs to, so the mute button sits with the thing it mutes.
+     Reordered by `order` rather than in the markup, since the row is still a
+     button followed by its own label and slider. */
   @media (min-width:620px){
-    .srow{grid-template-columns:auto 74px 1fr auto}
-    .slabel{display:block}
+    .srow{grid-template-columns:74px auto 1fr auto}
+    .slabel{display:block;order:1}
+    .srow .sicon{order:2}
+    .srow input[type=range]{order:3}
+    .srow .vol{order:4}
   }
 
   .figs{
