@@ -31,6 +31,24 @@ The generator will only start a figure where its length divides the beat, which 
 
 Editing a bar switches the loop button on, the way Retry and loading a saved bar do, so the bar you have just built stays in front of you rather than being replaced on the next start. Edit during a run and the music follows within the bar. The picker closes when the bar underneath it changes for any other reason, and Escape or a tap outside closes it too.
 
+## Sharing a bar
+
+The **share** button beside the star opens a panel with a link to the bar in front of you and a picture of it. The link is copied to the clipboard the moment the panel opens, so you can paste it straight into a message; **copy link** copies it again.
+
+The picture is the staff itself, drawn on its paper and stacked the same way it is on your screen, with the tempo written over the opening as a tempo mark — ♩ = 90 — rather than as a caption under it. **copy picture** puts it on the clipboard as a PNG, **save picture** downloads it, and where the browser has a share sheet — a phone, mostly — **share…** hands both the picture and the link to it, so the bar can go into any messaging app. On a browser that will not give up the clipboard, the panel says so and the picture can still be saved, or pressed and held.
+
+The link spells the bar out rather than hiding it in a blob, so it can be read and edited by hand:
+
+```
+index.html?time=4&measures=1&bpm=90&bar=q.ee.h
+```
+
+`time` is the meter, `measures` the length, `bpm` the tempo, and `bar` the figures in order, by the ids the **Rhythm figures** panel uses. Every beat is covered by exactly one figure and no figure crosses a barline, so where each one starts follows from the lengths and does not have to be written down. Nothing is compressed; the whole thing is short enough not to need it.
+
+Because of that you can type one yourself, and it is read forgivingly. `?bar=ee` is an eighth pair and then silence — anything you leave off the end fills with quarter rests. A figure that would cross a barline or run past the end of the rhythm is dropped, and a name that is not in the library becomes a quarter note.
+
+Opening a link puts that bar on the staff with its tempo, meter and length, and switches the loop button on so the first start does not deal a fresh bar over the top of it. The parameters stay in the address bar, so the page means the same bar if you open it again.
+
 ## Saved bars
 
 The **☆** in the top-left corner of the staff keeps the bar in front of you, along with the tempo you were reading it at. The star fills in once a bar is saved, and tapping it again drops that bar, so it tells you at a glance whether what you are looking at is one you already kept.
@@ -103,5 +121,6 @@ Keyboards, touchscreens, and audio output all add latency, so raw tap timestamps
 - The cowbell is two detuned square oscillators through a bandpass filter, in the style of the 808 cowbell.
 - The cowbell and the metronome each run through their own gain node, which is why the volume sliders and the mute buttons affect sounds that were scheduled a bar in advance. Sounds are written at full scale and a single output gain provides the headroom, so equal slider positions really are equal loudness.
 - The notation is hand-drawn SVG rather than a music font, so rests and flags look stylized.
+- The shared picture is that same SVG rasterized onto a canvas at twice size, with the theme colors resolved into it first, since a standalone SVG has no page to read them from. Both the link and the picture are made in the browser and nothing is uploaded; sharing one is you sending it.
 - The next rhythm's audio is scheduled while you play the current one, which is how the transition lands with no gap. Because of that head start, anything that changes what the next bar should be — the loop button, the meter, the length, the figures — lays that bar down again rather than waiting for it to come round.
 - The screen wake lock uses the Screen Wake Lock API where it exists, and is simply skipped where it does not. It is taken when a run starts, dropped when the run stops or ends, and re-taken when you come back to the tab.
